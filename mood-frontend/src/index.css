@@ -14,13 +14,39 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: #1f1d18;
   background: #f8f7f4;
-  background-image:
-    radial-gradient(at 8% 4%, rgba(124, 92, 255, 0.08) 0, transparent 38%),
-    radial-gradient(at 95% 12%, rgba(232, 122, 77, 0.07) 0, transparent 42%),
-    radial-gradient(at 75% 92%, rgba(109, 187, 138, 0.07) 0, transparent 50%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Toggle switch base */
+.toggle {
+  appearance: none;
+  position: relative;
+  width: 2.5rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  background-color: #dcd9cf;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease;
+}
+.toggle:checked {
+  background-color: #7c5cff;
+}
+.toggle:checked::after {
+  transform: translateX(1.125rem);
 }
 
 @layer components {

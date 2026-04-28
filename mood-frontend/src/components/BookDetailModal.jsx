@@ -1,5 +1,5 @@
-// BookDetailModal — inline modal showing book cover, summary, themes, external link
 import { useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 const COVER_PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 240%22><rect width=%22160%22 height=%22240%22 fill=%22%23faf0d4%22/></svg>';
@@ -10,7 +10,7 @@ const CloseIcon = () => (
   </svg>
 );
 
-const BookDetailModal = ({ item, onClose }) => {
+const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
   useEffect(() => {
     if (!item) return;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -24,10 +24,22 @@ const BookDetailModal = ({ item, onClose }) => {
 
   if (!item) return null;
 
-  const openLibraryUrl = item.externalId
-    ? `https://openlibrary.org/works/${item.externalId}`
-    : `https://openlibrary.org/search?q=${encodeURIComponent(item.title)}`;
+  const favKey = item.externalId || item.title;
+  const favored = isFavorite?.(favKey);
+
   const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(item.title)}`;
+
+  const handleSaveToLibrary = () => {
+    onToggleFavorite?.({
+      contentType: 'book',
+      externalId: favKey,
+      title: item.title,
+      thumbnail: item.poster,
+    });
+    if (!favored) {
+      toast.success('Saved to your library');
+    }
+  };
 
   return (
     <div
@@ -54,9 +66,7 @@ const BookDetailModal = ({ item, onClose }) => {
               src={item.poster || COVER_PLACEHOLDER}
               alt={item.title}
               className="h-full w-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = COVER_PLACEHOLDER;
-              }}
+              onError={(e) => { e.currentTarget.src = COVER_PLACEHOLDER; }}
             />
           </div>
 
@@ -71,7 +81,6 @@ const BookDetailModal = ({ item, onClose }) => {
 
             <div className="mt-3 flex flex-wrap gap-2">
               {item.genre && <span className="chip">{item.genre}</span>}
-              <span className="chip-accent">AI pick</span>
             </div>
 
             {item.aiExplanation && (
@@ -81,9 +90,12 @@ const BookDetailModal = ({ item, onClose }) => {
             )}
 
             <div className="mt-7 flex flex-wrap gap-2.5">
-              <a href={openLibraryUrl} target="_blank" rel="noreferrer" className="btn-primary">
-                Open in Library
-              </a>
+              <button
+                onClick={handleSaveToLibrary}
+                className={favored ? 'btn-secondary' : 'btn-primary'}
+              >
+                {favored ? 'Saved to library' : 'Save to library'}
+              </button>
               <a href={goodreadsUrl} target="_blank" rel="noreferrer" className="btn-secondary">
                 Goodreads
               </a>

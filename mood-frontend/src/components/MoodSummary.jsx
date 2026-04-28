@@ -1,4 +1,3 @@
-// MoodSummary — hero summary card displayed above results
 import IntensityBar from './IntensityBar';
 import SaveVibeButton from './SaveVibeButton';
 import { getVibeColor } from '../utils/constants';
@@ -19,7 +18,7 @@ const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <span className="section-eyebrow" style={{ color: color.ink }}>
-              ✨ Your vibe
+              Your vibe
             </span>
             <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink-700 sm:text-5xl">
               {mood.title}

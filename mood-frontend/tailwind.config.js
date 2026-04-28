@@ -45,6 +45,8 @@ export default {
         'pulse-soft': 'pulseSoft 2.4s ease-in-out infinite',
         'orb-spin': 'orbSpin 6s linear infinite',
         shimmer: 'shimmer 2s ease-in-out infinite',
+        'slide-out-left': 'slideOutLeft 0.3s ease-out forwards',
+        'scale-in': 'scaleIn 0.35s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -66,6 +68,14 @@ export default {
         shimmer: {
           '0%, 100%': { opacity: 0.6 },
           '50%': { opacity: 1 },
+        },
+        slideOutLeft: {
+          '0%': { opacity: 1, transform: 'translateX(0) scale(1)' },
+          '100%': { opacity: 0, transform: 'translateX(-32px) scale(0.93)' },
+        },
+        scaleIn: {
+          '0%': { opacity: 0, transform: 'scale(0.92)' },
+          '100%': { opacity: 1, transform: 'scale(1)' },
         },
       },
     },

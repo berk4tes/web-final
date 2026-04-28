@@ -1,4 +1,3 @@
-// MovieDetailModal — inline drawer/modal that reveals movie metadata without navigating
 import { useEffect } from 'react';
 
 const POSTER_PLACEHOLDER =
@@ -60,22 +59,19 @@ const MovieDetailModal = ({ item, onClose }) => {
               src={item.poster || POSTER_PLACEHOLDER}
               alt={item.title}
               className="h-full w-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = POSTER_PLACEHOLDER;
-              }}
+              onError={(e) => { e.currentTarget.src = POSTER_PLACEHOLDER; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-ink-800/40 to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/0" />
           </div>
 
           <div className="p-6 sm:p-8">
-            <span className="section-eyebrow">Movie / Series</span>
+            <span className="section-eyebrow">Film / Series</span>
             <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700 sm:text-4xl">
               {item.title}
             </h2>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {item.genre && <span className="chip">{item.genre}</span>}
-              {item.aiExplanation && <span className="chip-accent">AI pick</span>}
             </div>
 
             {item.aiExplanation && (
@@ -95,12 +91,8 @@ const MovieDetailModal = ({ item, onClose }) => {
               <a href={trailerUrl} target="_blank" rel="noreferrer" className="btn-primary">
                 <PlayIcon /> Watch trailer
               </a>
-              <a href={imdbUrl} target="_blank" rel="noreferrer" className="btn-secondary">
-                IMDb
-              </a>
-              <a href={letterboxdUrl} target="_blank" rel="noreferrer" className="btn-secondary">
-                Letterboxd
-              </a>
+              <a href={imdbUrl} target="_blank" rel="noreferrer" className="btn-secondary">IMDb</a>
+              <a href={letterboxdUrl} target="_blank" rel="noreferrer" className="btn-secondary">Letterboxd</a>
             </div>
           </div>
         </div>

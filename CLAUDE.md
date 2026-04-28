@@ -209,6 +209,43 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-04-28] UI/UX refinement pass — global mood theming, persistence, interaction polish
+
+- **Yeni dosya:** [src/context/MoodThemeContext.jsx](mood-frontend/src/context/MoodThemeContext.jsx) — global mood state yönetimi. Aktif vibe `localStorage` ile persist edilir. `setVibe`, `resetVibe`, `theme`, `colorKey` export edilir.
+- **Global background transition:** [App.jsx](mood-frontend/src/App.jsx) `ThemedWrapper` component'ı eklendi. Mood değiştiğinde `background-color` CSS transition ile sayfa tonu yumuşakça değişir (opacity + color dual transition).
+- **Emoji kaldırma:** Tüm sayfalarda emoji temizlendi — Navbar logo (`✦` → SVG), MoodSummary eyebrow (`✨`), SectionHeader eyebrow'ları, EmptyState, StreakCounter (🔥 → SVG flame), MoodSummaryCard, button label'ları (`Generate ✨`, `Vibe saved ✨`).
+- **Navbar güncellendi** ([Navbar.jsx](mood-frontend/src/components/Navbar.jsx)): Mood-responsive logo gradient, "Reset vibe" butonu (vibe aktifken görünür), logout çağrısında `resetVibe()` de çağrılır.
+- **LoadingVibeState yenilendi** ([LoadingVibeState.jsx](mood-frontend/src/components/LoadingVibeState.jsx)): Daha büyük animasyon (h-44/w-44), mood-colored conic-gradient ring, `useMoodTheme` ile dinamik renk. Heading → "Interpreting your atmosphere...".
+- **MovieCard** ([MovieCard.jsx](mood-frontend/src/components/MovieCard.jsx)): "AI Pick" kaldırıldı. "Watched" butonu eklendi — tıklanınca kart `animate-slide-out-left` ile çıkar, Dashboard'daki Watched tab'ına `moodflix.watched` localStorage'a eklenir.
+- **BookCard** ([BookCard.jsx](mood-frontend/src/components/BookCard.jsx)): "Read" butonu eklendi — tıklanınca kitabı favorites'e kaydeder (favorilerde değilse) ve `animate-slide-out-left` ile kartı kaldırır. "AI Pick" kaldırıldı.
+- **MusicCard** ([MusicCard.jsx](mood-frontend/src/components/MusicCard.jsx)): Artist name → Spotify artist search linki (hover'da görünür, tıklayınca Spotify açılır).
+- **BookDetailModal** ([BookDetailModal.jsx](mood-frontend/src/components/BookDetailModal.jsx)): "Open in Library" → "Save to library" olarak değiştirildi; tıklayınca backend favorites API'ye kaydeder. "AI pick" chip kaldırıldı.
+- **MovieDetailModal** ([MovieDetailModal.jsx](mood-frontend/src/components/MovieDetailModal.jsx)): "AI pick" chip kaldırıldı.
+- **VibePage major rework** ([VibePage.jsx](mood-frontend/src/pages/VibePage.jsx)):
+  - `useMoodTheme` context'i kullanılıyor: vibe persist, navigate sonrası veri kaybı yok.
+  - "AI Vibe Interpreter" eyebrow kaldırıldı.
+  - Emotional intensity slider (1-10) eklendi — değişince 1.2s debounce ile API re-call tetikler.
+  - Prompt suggestions dinamik: mevcut mood'un `colorKey`'ine göre `getPromptSuggestions()` kullanır.
+  - Dashboard'dan "Play again" ile vibe replay: `location.state.replayPrompt` üzerinden.
+  - Per-section (`movieList`, `bookList`, `musicList`) dismissal state: kart kaldırıldığında diğerleri bozulmaz.
+  - Secondary "Refine your vibe" search bar sonuçların altında eklendi.
+  - Floating save button artık `heroColor` ile mood-tinted.
+- **DashboardPage major rework** ([DashboardPage.jsx](mood-frontend/src/pages/DashboardPage.jsx)):
+  - Üç tab: Saved Vibes | Collection | Watched.
+  - Saved Vibes: kartlara hover'da sadece o kart mood rengi değişir (sayfa değil). Tıklayınca `/vibe` sayfasına yönlendirir ve aynı prompt'u tekrar çalıştırır.
+  - Collection tab: backend `/favorites` fetch, filtreler (All | Movies | Series | Books | Music).
+  - Watched tab: `moodflix.watched` localStorage'dan okunur, "Remove" ile silinir.
+  - "Discover more" → `/vibe` linki.
+- **ProfilePage major rework** ([ProfilePage.jsx](mood-frontend/src/pages/ProfilePage.jsx)):
+  - Favorites listesi Dashboard'a taşındı; Profile artık hesap + tercihler merkezi.
+  - Account Info: username/avatar düzenleme, email (read-only), password change UI (backend desteği eklenince çalışır).
+  - Default Mood Theme: 7 seçenek, `moodflix.preferences.defaultTheme` localStorage'a kaydedilir, `MoodThemeContext` mount'ta okur.
+  - Recommendation Preferences: 7 toggle (showMovies, showSeries, showBooks, showMusic, showPopular, showNiche, highMatchOnly), `moodflix.preferences.recPrefs` localStorage'a kaydedilir.
+- **tailwind.config.js** güncellendi: `animate-slide-out-left` ve `animate-scale-in` keyframe'leri eklendi.
+- **index.css** güncellendi: `.toggle` CSS component (checkbox → pill switch) eklendi. Body background-image kaldırıldı (ThemedWrapper tarafından handle ediliyor).
+- **constants.js** güncellendi: `MOOD_PROMPT_SUGGESTIONS` objesi (7 colorKey → 4 prompt örneği) ve `getPromptSuggestions(colorKey)` helper eklendi. MOODS listesinden emoji'ler kaldırıldı.
+- **Build:** `vite build` → clean build, 912 modules, 45.69kB CSS, 658kB JS (195kB gzip). Sıfır error.
+
 ### [2026-04-22] UI redesign — light editorial theme + prompt-based vibe flow
 
 - **Konsept değişikliği:** 7 emoji + content type seçici → tek "vibe prompt" input. Kullanıcı "Feels like Gilmore Girls in autumn" gibi metin yazıyor, AI tek seferde mood yorumu + 3 farklı section (music + movies + books) üretiyor.

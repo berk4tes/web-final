@@ -1,19 +1,19 @@
 // Shared constants — moods, content types, color tokens for vibe interpretation
 export const MOODS = [
-  { value: 'happy', label: 'Mutlu', emoji: '😊', color: 'bg-mood-happy', ring: 'ring-mood-happy' },
-  { value: 'sad', label: 'Üzgün', emoji: '😢', color: 'bg-mood-sad', ring: 'ring-mood-sad' },
-  { value: 'excited', label: 'Heyecanlı', emoji: '🤩', color: 'bg-mood-excited', ring: 'ring-mood-excited' },
-  { value: 'calm', label: 'Sakin', emoji: '😌', color: 'bg-mood-calm', ring: 'ring-mood-calm' },
-  { value: 'angry', label: 'Kızgın', emoji: '😠', color: 'bg-mood-angry', ring: 'ring-mood-angry' },
-  { value: 'nostalgic', label: 'Nostaljik', emoji: '🥺', color: 'bg-mood-nostalgic', ring: 'ring-mood-nostalgic' },
-  { value: 'tired', label: 'Yorgun', emoji: '😴', color: 'bg-mood-tired', ring: 'ring-mood-tired' },
+  { value: 'happy', label: 'Happy', color: 'bg-mood-happy', ring: 'ring-mood-happy' },
+  { value: 'sad', label: 'Sad', color: 'bg-mood-sad', ring: 'ring-mood-sad' },
+  { value: 'excited', label: 'Excited', color: 'bg-mood-excited', ring: 'ring-mood-excited' },
+  { value: 'calm', label: 'Calm', color: 'bg-mood-calm', ring: 'ring-mood-calm' },
+  { value: 'angry', label: 'Intense', color: 'bg-mood-angry', ring: 'ring-mood-angry' },
+  { value: 'nostalgic', label: 'Nostalgic', color: 'bg-mood-nostalgic', ring: 'ring-mood-nostalgic' },
+  { value: 'tired', label: 'Tired', color: 'bg-mood-tired', ring: 'ring-mood-tired' },
 ];
 
 export const CONTENT_TYPES = [
-  { value: 'movie', label: 'Film', icon: '🎬' },
-  { value: 'series', label: 'Dizi', icon: '📺' },
-  { value: 'music', label: 'Müzik', icon: '🎵' },
-  { value: 'book', label: 'Kitap', icon: '📘' },
+  { value: 'movie', label: 'Film' },
+  { value: 'series', label: 'Series' },
+  { value: 'music', label: 'Music' },
+  { value: 'book', label: 'Book' },
 ];
 
 export const MOOD_BY_VALUE = Object.fromEntries(MOODS.map((m) => [m.value, m]));
@@ -98,4 +98,53 @@ export const VIBE_PROMPT_EXAMPLES = [
   'Cozy attic during a thunderstorm',
 ];
 
+// Mood-responsive prompt suggestions — shown after a vibe is interpreted.
+export const MOOD_PROMPT_SUGGESTIONS = {
+  calm: [
+    'A quiet afternoon with herbal tea',
+    'Soft fog over mountains at dawn',
+    'Reading beside an open window',
+    'A gentle walk through a botanical garden',
+  ],
+  sad: [
+    'A letter you never sent',
+    'Empty cafes in winter rain',
+    'The last song before goodbye',
+    'Standing alone at the ocean\'s edge',
+  ],
+  nostalgic: [
+    'Feels like Gilmore Girls in autumn',
+    'Dusty photographs from childhood summers',
+    'The smell of your grandparents\' kitchen',
+    'Polaroids from a summer you can\'t forget',
+  ],
+  happy: [
+    'A sunlit Sunday in a Parisian café',
+    'Dancing barefoot in the backyard',
+    'Strawberries and laughter at golden hour',
+    'The first warm day after a long winter',
+  ],
+  excited: [
+    'Dark feminine gym energy',
+    'Electric city nights before a big show',
+    'Pre-concert adrenaline',
+    'Racing into something new',
+  ],
+  angry: [
+    'Controlled chaos and raw intensity',
+    'A storm that finally breaks open',
+    'Fierce, unapologetic, and loud',
+    'Running until the frustration fades',
+  ],
+  dreamy: [
+    'Heartbreak sleeping under string lights',
+    'Cozy attic during a thunderstorm',
+    'Lost in a foreign city at midnight',
+    'Lavender fields slowly fading to dusk',
+  ],
+};
+
 export const getVibeColor = (key) => VIBE_COLORS[key] || VIBE_COLORS.calm;
+
+export const getPromptSuggestions = (colorKey) =>
+  MOOD_PROMPT_SUGGESTIONS[colorKey] || VIBE_PROMPT_EXAMPLES.slice(0, 4);
