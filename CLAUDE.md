@@ -209,6 +209,47 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-04-22] AI provider: Anthropic → OpenAI (end-to-end test başarılı)
+
+- **AI sağlayıcısı değiştirildi:** `@anthropic-ai/sdk` kaldırıldı, `openai@4.104.0` yüklendi.
+- **Kullanılan model:** `gpt-4o-mini` (JSON-mode destekli, ucuz, hızlı).
+- [mood-backend/utils/claudeService.js](mood-backend/utils/claudeService.js) **silindi**, yerine [mood-backend/utils/aiService.js](mood-backend/utils/aiService.js) yazıldı:
+  - `response_format: { type: 'json_object' }` ile güvenli JSON parse
+  - System prompt eklendi
+  - `extractRecommendations` helper'ı farklı wrapper key'leri handle eder
+  - Retry mekanizması korundu
+- [mood-backend/controllers/recommendationController.js](mood-backend/controllers/recommendationController.js): `require('../utils/claudeService')` → `require('../utils/aiService')`.
+- `.env`'de `ANTHROPIC_API_KEY` → `OPENAI_API_KEY` olarak değiştirildi (kullanıcı tarafı).
+- **MongoDB Atlas IP whitelist** sorunu çözüldü: geçici 6 saatlik `78.167.1.140/32` erişimi eklendi.
+- **End-to-end test başarılı ✅:** `POST /api/recommendations/mood` çağrısı:
+  - Login → JWT token ✓
+  - OpenAI `gpt-4o-mini` → 6 film önerisi (La La Land, Paddington 2, Mamma Mia! vs.)
+  - TMDB → 6/6 film için poster URL'i geldi
+  - AI açıklamalar her öneri için mood'a uygun
+- Toplam süre: ~3-5 saniye per request.
+
+### [2026-04-21] API stack genişletildi: Spotify + Last.fm + Open Library
+
+- **Yeni provider stack belirlendi:**
+  - 🎬 Movie/Series → **TMDB** (mevcut)
+  - 🎵 Music → **Spotify** (mevcut, henüz entegre edilmedi)
+  - 🎶 Music mood/tags → **Last.fm** (yeni)
+  - 📘 Books → **Open Library** (yeni, key gerektirmez)
+  - 🤖 AI → **Anthropic Claude** (mevcut)
+- [mood-backend/.env](mood-backend/.env) güncellendi: `LASTFM_API_KEY`, `LASTFM_SHARED_SECRET`, `OPENLIBRARY_BASE_URL` eklendi.
+- [mood-backend/.env.example](mood-backend/.env.example) güncellendi: tüm provider'lar için açıklayıcı yorum + signup URL'leri eklendi.
+- **Henüz yapılmadı:** Last.fm + Open Library + Spotify backend entegrasyonu (controller/service kodları). Sadece env şeması hazır.
+- **Kullanıcı tarafında bekleyen aksiyonlar:** TMDB, Spotify, Last.fm key'leri al ve `.env`'e yapıştır. Anthropic key de hala `sk-ant-...` placeholder.
+
+### [2026-04-21] GitHub repo'ya ilk push
+
+- Yeni dosya: [.gitignore](.gitignore) (root) — kapsamlı, tüm `.env` dosyaları + `node_modules` + build/log/OS dosyaları ignored.
+- [mood-frontend/.gitignore](mood-frontend/.gitignore) güncellendi: `.env` eklendi (sadece `.env.local` vardı).
+- `git init -b main` + remote eklendi: `https://github.com/berk4tes/web-final.git`
+- Initial commit yapıldı: 63 dosya (backend + frontend baseline + CLAUDE.md).
+- **Güvenlik kontrolü:** Sadece `.env.example` commit edildi, gerçek `.env` dosyaları (MongoDB password + JWT secret içeriyor) staging'e alınmadı.
+- `git push -u origin main` başarılı. Branch `main` → `origin/main` track ediyor.
+
 ### [2026-04-21] Backend ilk başarılı bağlantı + test user oluşturuldu
 
 - `mood-backend/.env` dolduruldu (MONGO_URI + JWT_SECRET).

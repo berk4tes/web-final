@@ -4,7 +4,7 @@ const { validationResult } = require('express-validator');
 const MoodLog = require('../models/MoodLog');
 const Recommendation = require('../models/Recommendation');
 const asyncHandler = require('../utils/asyncHandler');
-const { generateRecommendations } = require('../utils/claudeService');
+const { generateRecommendations } = require('../utils/aiService');
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
