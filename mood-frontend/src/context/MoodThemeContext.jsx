@@ -1,18 +1,11 @@
 import { createContext, useContext, useState } from 'react';
 import { getVibeColor } from '../utils/constants';
+import { inferMoodKeyFromText } from '../utils/moodKeywords';
 
 const CURRENT_VIBE_KEY = 'moodflix.currentVibe';
+const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
 
 const MoodThemeContext = createContext(null);
-
-const loadDefaultColorKey = () => {
-  try {
-    const prefs = JSON.parse(localStorage.getItem('moodflix.preferences') || '{}');
-    return prefs.defaultTheme || null;
-  } catch {
-    return null;
-  }
-};
 
 export const MoodThemeProvider = ({ children }) => {
   const [vibeData, setVibeDataRaw] = useState(() => {
@@ -23,23 +16,33 @@ export const MoodThemeProvider = ({ children }) => {
       return null;
     }
   });
+  const [draftColorKey, setDraftColorKey] = useState(null);
 
-  const colorKey = vibeData?.mood?.colorKey || loadDefaultColorKey();
+  const colorKey = vibeData?.mood?.colorKey || draftColorKey;
   const theme = colorKey ? getVibeColor(colorKey) : null;
 
   const setVibe = (data) => {
     setVibeDataRaw(data);
+    if (data) setDraftColorKey(null);
     if (data) {
       localStorage.setItem(CURRENT_VIBE_KEY, JSON.stringify(data));
     } else {
       localStorage.removeItem(CURRENT_VIBE_KEY);
+      localStorage.removeItem(VIBE_LISTS_KEY);
     }
   };
 
-  const resetVibe = () => setVibe(null);
+  const setDraftMoodFromPrompt = (text) => {
+    setDraftColorKey(inferMoodKeyFromText(text));
+  };
+
+  const resetVibe = () => {
+    setDraftColorKey(null);
+    setVibe(null);
+  };
 
   return (
-    <MoodThemeContext.Provider value={{ vibeData, colorKey, theme, setVibe, resetVibe }}>
+    <MoodThemeContext.Provider value={{ vibeData, colorKey, theme, setVibe, resetVibe, setDraftMoodFromPrompt }}>
       {children}
     </MoodThemeContext.Provider>
   );

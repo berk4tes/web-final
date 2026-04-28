@@ -26,10 +26,14 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
 
   const favKey = item.externalId || item.title;
   const favored = isFavorite?.(favKey);
+  const titleCover = item.title
+    ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(item.title)}-L.jpg?default=false`
+    : COVER_PLACEHOLDER;
 
   const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(item.title)}`;
 
   const handleSaveToLibrary = () => {
+    if (favored) return;
     onToggleFavorite?.({
       contentType: 'book',
       externalId: favKey,
@@ -63,10 +67,12 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
         <div className="grid grid-cols-1 md:grid-cols-[220px_1fr]">
           <div className="relative aspect-[2/3] w-full bg-ink-100 md:h-auto md:aspect-auto">
             <img
-              src={item.poster || COVER_PLACEHOLDER}
+              src={item.poster || titleCover}
               alt={item.title}
               className="h-full w-full object-cover"
-              onError={(e) => { e.currentTarget.src = COVER_PLACEHOLDER; }}
+              onError={(e) => {
+                if (e.currentTarget.src !== COVER_PLACEHOLDER) e.currentTarget.src = COVER_PLACEHOLDER;
+              }}
             />
           </div>
 

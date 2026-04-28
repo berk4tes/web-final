@@ -24,10 +24,11 @@ const recommendationSchema = new mongoose.Schema(
     externalId: { type: String, default: '' },
     source: {
       type: String,
-      enum: ['tmdb', 'spotify', 'openlibrary', 'lastfm'],
+      enum: ['tmdb', 'spotify', 'openlibrary', 'lastfm', 'applemusic', 'googlebooks'],
       default: 'tmdb',
     },
     poster: { type: String, default: '' },
+    appleUrl: { type: String, default: '' },
     overview: { type: String, default: '' },
     genre: { type: String, default: '' },
     aiExplanation: { type: String, default: '' },

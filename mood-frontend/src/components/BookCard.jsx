@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const COVER_PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 240%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23faf0d4%22/><stop offset=%221%22 stop-color=%22%23e9e3ff%22/></linearGradient></defs><rect width=%22160%22 height=%22240%22 fill=%22url(%23g)%22/></svg>';
@@ -16,10 +17,15 @@ const BookOpenIcon = () => (
   </svg>
 );
 
-const BookCard = ({ item, onClick, isFavorite, onToggleFavorite, onRead }) => {
+const BookCard = ({ item, index = 0, onClick, isFavorite, onToggleFavorite, onRead }) => {
+  const { prefs } = useUserPreferences();
+  const tr = prefs.language === 'tr';
   const favKey = item.externalId || item.title;
   const favored = isFavorite?.(favKey);
   const [exiting, setExiting] = useState(false);
+  const titleCover = item.title
+    ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(item.title)}-L.jpg?default=false`
+    : COVER_PLACEHOLDER;
 
   const handleFav = (e) => {
     e.stopPropagation();
@@ -33,21 +39,12 @@ const BookCard = ({ item, onClick, isFavorite, onToggleFavorite, onRead }) => {
 
   const handleRead = (e) => {
     e.stopPropagation();
-    // Save to library (favorites) then dismiss
-    if (!favored) {
-      onToggleFavorite?.({
-        contentType: 'book',
-        externalId: favKey,
-        title: item.title,
-        thumbnail: item.poster,
-      });
-    }
     setExiting(true);
-    setTimeout(() => onRead?.(favKey), 280);
+    setTimeout(() => onRead?.(item), 280);
   };
 
   return (
-    <div className={exiting ? 'animate-slide-out-left pointer-events-none' : 'animate-scale-in'}>
+    <div className={exiting ? 'animate-slide-out-left pointer-events-none' : index === 4 ? 'animate-slide-in-right' : 'animate-scale-in'}>
       <button
         type="button"
         onClick={() => onClick?.(item)}
@@ -55,11 +52,13 @@ const BookCard = ({ item, onClick, isFavorite, onToggleFavorite, onRead }) => {
       >
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-ink-100 shadow-soft transition group-hover:-translate-y-1 group-hover:shadow-glow">
           <img
-            src={item.poster || COVER_PLACEHOLDER}
+            src={item.poster || titleCover}
             alt={item.title}
             loading="lazy"
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            onError={(e) => { e.currentTarget.src = COVER_PLACEHOLDER; }}
+            onError={(e) => {
+              if (e.currentTarget.src !== COVER_PLACEHOLDER) e.currentTarget.src = COVER_PLACEHOLDER;
+            }}
           />
           <div className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-black/15 to-transparent" />
 
@@ -89,7 +88,7 @@ const BookCard = ({ item, onClick, isFavorite, onToggleFavorite, onRead }) => {
           onClick={handleRead}
           className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-white px-1 py-1.5 text-xs font-medium text-ink-500 transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent-ink"
         >
-          <BookOpenIcon /> Read
+          <BookOpenIcon /> {tr ? 'Okudum' : 'Read'}
         </button>
       )}
     </div>

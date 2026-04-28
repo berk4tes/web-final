@@ -342,7 +342,7 @@ npm run dev            # http://localhost:5173
 - [mood-backend/.env](mood-backend/.env) güncellendi: `LASTFM_API_KEY`, `LASTFM_SHARED_SECRET`, `OPENLIBRARY_BASE_URL` eklendi.
 - [mood-backend/.env.example](mood-backend/.env.example) güncellendi: tüm provider'lar için açıklayıcı yorum + signup URL'leri eklendi.
 - **Henüz yapılmadı:** Last.fm + Open Library + Spotify backend entegrasyonu (controller/service kodları). Sadece env şeması hazır.
-- **Kullanıcı tarafında bekleyen aksiyonlar:** TMDB, Spotify, Last.fm key'leri al ve `.env`'e yapıştır. Anthropic key de hala `sk-ant-...` placeholder.
+- **Kullanıcı tarafında bekleyen aksiyonlar:** TMDB, Spotify, Last.fm key'leri al ve `.env`'e yapıştır. AI provider key'i de placeholder durumda.
 
 ### [2026-04-21] GitHub repo'ya ilk push
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const LogoMark = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -12,6 +13,7 @@ const LogoMark = () => (
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, resetVibe, vibeData } = useMoodTheme();
+  const { t } = useUserPreferences();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -48,9 +50,9 @@ const Navbar = () => {
 
         {isAuthenticated && (
           <div className="hidden items-center gap-1 md:flex">
-            <NavLink to="/vibe" className={linkClass}>Vibe</NavLink>
-            <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
-            <NavLink to="/profile" className={linkClass}>Profile</NavLink>
+            <NavLink to="/vibe" className={linkClass}>{t('navVibe')}</NavLink>
+            <NavLink to="/dashboard" className={linkClass}>{t('navDashboard')}</NavLink>
+            <NavLink to="/profile" className={linkClass}>{t('navProfile')}</NavLink>
           </div>
         )}
 
@@ -62,7 +64,7 @@ const Navbar = () => {
                   onClick={() => { resetVibe(); navigate('/vibe'); }}
                   className="rounded-full px-3 py-1.5 text-xs font-medium text-ink-400 transition hover:text-rose-500 border border-ink-200 hover:border-rose-200"
                 >
-                  Reset vibe
+                  {t('resetVibe')}
                 </button>
               )}
               <Link
@@ -85,12 +87,12 @@ const Navbar = () => {
                 )}
                 <span className="max-w-[120px] truncate">{user?.username}</span>
               </Link>
-              <button onClick={handleLogout} className="btn-ghost">Sign out</button>
+              <button onClick={handleLogout} className="btn-ghost">{t('signOut')}</button>
             </>
           ) : (
             <>
-              <NavLink to="/login" className={linkClass}>Sign in</NavLink>
-              <Link to="/register" className="btn-primary text-sm">Get started</Link>
+              <NavLink to="/login" className={linkClass}>{t('signIn')}</NavLink>
+              <Link to="/register" className="btn-primary text-sm">{t('getStarted')}</Link>
             </>
           )}
         </div>
@@ -110,28 +112,28 @@ const Navbar = () => {
         <div className="border-t border-ink-100 bg-white px-4 py-3 md:hidden">
           {isAuthenticated ? (
             <div className="flex flex-col gap-1">
-              <NavLink to="/vibe" onClick={() => setOpen(false)} className={linkClass}>Vibe</NavLink>
-              <NavLink to="/dashboard" onClick={() => setOpen(false)} className={linkClass}>Dashboard</NavLink>
-              <NavLink to="/profile" onClick={() => setOpen(false)} className={linkClass}>Profile</NavLink>
+              <NavLink to="/vibe" onClick={() => setOpen(false)} className={linkClass}>{t('navVibe')}</NavLink>
+              <NavLink to="/dashboard" onClick={() => setOpen(false)} className={linkClass}>{t('navDashboard')}</NavLink>
+              <NavLink to="/profile" onClick={() => setOpen(false)} className={linkClass}>{t('navProfile')}</NavLink>
               {vibeData && (
                 <button
                   onClick={() => { resetVibe(); setOpen(false); navigate('/vibe'); }}
                   className="mt-1 rounded-full px-4 py-2 text-left text-sm text-rose-500 hover:bg-rose-50"
                 >
-                  Reset vibe
+                  {t('resetVibe')}
                 </button>
               )}
               <button
                 onClick={handleLogout}
                 className="mt-1 rounded-full px-4 py-2 text-left text-sm text-ink-500 hover:bg-ink-100"
               >
-                Sign out
+                {t('signOut')}
               </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <NavLink to="/login" onClick={() => setOpen(false)} className={linkClass}>Sign in</NavLink>
-              <NavLink to="/register" onClick={() => setOpen(false)} className={linkClass}>Get started</NavLink>
+              <NavLink to="/login" onClick={() => setOpen(false)} className={linkClass}>{t('signIn')}</NavLink>
+              <NavLink to="/register" onClick={() => setOpen(false)} className={linkClass}>{t('getStarted')}</NavLink>
             </div>
           )}
         </div>

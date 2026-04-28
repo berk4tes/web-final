@@ -34,16 +34,13 @@ const LoadingVibeState = ({ message = 'Interpreting your atmosphere...' }) => {
         />
         {/* Spinning ring */}
         <div
-          className="absolute inset-0 rounded-full animate-orb-spin"
-          style={{ ...ringStyle, padding: '3px' }}
+          className="absolute inset-0 rounded-full animate-orb-spin shadow-glow"
+          style={{ ...ringStyle, padding: '5px' }}
         >
           <div className="h-full w-full rounded-full bg-[#f8f7f4]" />
         </div>
         {/* Inner orb */}
-        <div
-          className="absolute inset-5 rounded-full opacity-80"
-          style={orbStyle}
-        />
+        <div className="absolute inset-5 rounded-full opacity-80 animate-pulse-soft" style={orbStyle} />
         {/* Core */}
         <div className="absolute inset-9 rounded-full bg-white/80 backdrop-blur" />
       </div>
@@ -51,7 +48,6 @@ const LoadingVibeState = ({ message = 'Interpreting your atmosphere...' }) => {
       <p className="mt-10 font-display text-2xl font-semibold italic text-ink-600 animate-shimmer">
         {message}
       </p>
-      <p className="mt-3 text-xs uppercase tracking-[0.28em] text-ink-400">curating · listening · imagining</p>
     </div>
   );
 };

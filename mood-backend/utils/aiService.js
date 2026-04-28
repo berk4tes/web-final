@@ -13,7 +13,7 @@ The user's current mood: "${moodLabel}" (intensity: ${intensity}/10).
 Additional context: "${moodText || 'None provided'}"
 Content type requested: ${contentType}
 
-Suggest exactly 6 ${contentType} items that match this mood.
+Suggest exactly 10 ${contentType} items that match this mood.
 Return ONLY a valid JSON object with a "recommendations" array. Example format:
 {
   "recommendations": [
@@ -58,7 +58,7 @@ Rules:
 - "intensity" is a number between 0 and 1 representing emotional strength
 - "colorKey" must be one of: calm, sad, nostalgic, angry, dreamy, happy, excited
 - "tags" must be 3-5 short words/phrases describing the vibe
-- Each list (music, movies, books) must contain EXACTLY 5 items
+- Each list (music, movies, books) must contain EXACTLY 10 items
 - For "movies" you may mix films and series — pick whatever matches the vibe best
 - Use real, well-known titles that exist on TMDB / Open Library / Spotify
 - Keep "reason" under 20 words and emotionally evocative`;
@@ -152,9 +152,9 @@ const sanitizeVibe = (raw) => {
       intensity: Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 0.5,
       colorKey,
     },
-    music: Array.isArray(raw.music) ? raw.music.slice(0, 6) : [],
-    movies: Array.isArray(raw.movies) ? raw.movies.slice(0, 6) : [],
-    books: Array.isArray(raw.books) ? raw.books.slice(0, 6) : [],
+    music: Array.isArray(raw.music) ? raw.music.slice(0, 10) : [],
+    movies: Array.isArray(raw.movies) ? raw.movies.slice(0, 10) : [],
+    books: Array.isArray(raw.books) ? raw.books.slice(0, 10) : [],
   };
 };
 
@@ -169,11 +169,11 @@ const interpretVibe = async (prompt) => {
   const builtPrompt = buildVibePrompt(prompt.trim());
 
   try {
-    const raw = await callAIRaw(builtPrompt);
+    const raw = await callAIRaw(builtPrompt, { maxTokens: 4096 });
     return sanitizeVibe(raw);
   } catch (firstError) {
     console.warn('Vibe interpretation failed, retrying:', firstError.message);
-    const raw = await callAIRaw(builtPrompt);
+    const raw = await callAIRaw(builtPrompt, { maxTokens: 4096 });
     return sanitizeVibe(raw);
   }
 };

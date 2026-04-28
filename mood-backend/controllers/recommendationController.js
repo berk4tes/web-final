@@ -10,6 +10,8 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 const OPENLIBRARY_BASE = process.env.OPENLIBRARY_BASE_URL || 'https://openlibrary.org';
 const OPENLIBRARY_COVER_BASE = 'https://covers.openlibrary.org/b/id';
+const ITUNES_BASE = 'https://itunes.apple.com/search';
+const GOOGLE_BOOKS_BASE = 'https://www.googleapis.com/books/v1/volumes';
 
 const enrichWithTmdb = async (title, contentType) => {
   if (!process.env.TMDB_API_KEY) return null;
@@ -66,12 +68,81 @@ const enrichWithOpenLibrary = async (title) => {
   }
 };
 
-const enrichRecommendation = async (title, contentType) => {
+const enrichWithGoogleBooks = async (title) => {
+  try {
+    const { data } = await axios.get(GOOGLE_BOOKS_BASE, {
+      params: { q: title, maxResults: 1, printType: 'books' },
+      timeout: 8000,
+    });
+    const first = (data.items || [])[0];
+    if (!first) return null;
+    const info = first.volumeInfo || {};
+    const imageLinks = info.imageLinks || {};
+    const poster = (imageLinks.thumbnail || imageLinks.smallThumbnail || '')
+      .replace(/^http:/, 'https:')
+      .replace('&edge=curl', '');
+    const authors = (info.authors || []).slice(0, 2).join(', ');
+    const year = info.publishedDate ? String(info.publishedDate).slice(0, 4) : '';
+    return {
+      source: 'googlebooks',
+      externalId: first.id || title,
+      poster,
+      overview: authors ? `${authors}${year ? ` (${year})` : ''}` : '',
+    };
+  } catch (err) {
+    console.warn(`Google Books lookup failed for "${title}":`, err.message);
+    return null;
+  }
+};
+
+const enrichBook = async (title) => {
+  const openLibrary = await enrichWithOpenLibrary(title);
+  if (openLibrary?.poster) return openLibrary;
+  const googleBooks = await enrichWithGoogleBooks(title);
+  if (googleBooks?.poster) {
+    return {
+      ...googleBooks,
+      overview: openLibrary?.overview || googleBooks.overview,
+    };
+  }
+  return openLibrary || googleBooks;
+};
+
+const enrichWithItunes = async (title, artist = '') => {
+  try {
+    const { data } = await axios.get(ITUNES_BASE, {
+      params: {
+        term: `${title} ${artist}`.trim(),
+        media: 'music',
+        entity: 'song',
+        limit: 1,
+      },
+      timeout: 8000,
+    });
+    const first = (data.results || [])[0];
+    if (!first) return null;
+    return {
+      source: 'applemusic',
+      externalId: String(first.trackId || `${title}-${artist}`),
+      poster: (first.artworkUrl100 || '').replace('100x100bb', '600x600bb'),
+      overview: first.artistName || artist,
+      appleUrl: first.trackViewUrl || '',
+    };
+  } catch (err) {
+    console.warn(`iTunes lookup failed for "${title}":`, err.message);
+    return null;
+  }
+};
+
+const enrichRecommendation = async (title, contentType, artist = '') => {
   if (contentType === 'movie' || contentType === 'series') {
     return enrichWithTmdb(title, contentType);
   }
   if (contentType === 'book') {
-    return enrichWithOpenLibrary(title);
+    return enrichBook(title);
+  }
+  if (contentType === 'music') {
+    return enrichWithItunes(title, artist);
   }
   return null;
 };
@@ -114,7 +185,7 @@ exports.generateRecommendations = asyncHandler(async (req, res) => {
 
   const enriched = await Promise.all(
     suggestions.map(async (s) => {
-      const meta = await enrichRecommendation(s.title, contentType);
+      const meta = await enrichRecommendation(s.title, contentType, s.artist);
       return {
         moodLogId: moodLog._id,
         userId: req.user._id,
@@ -126,6 +197,7 @@ exports.generateRecommendations = asyncHandler(async (req, res) => {
         overview: meta?.overview || '',
         genre: s.genre || '',
         aiExplanation: s.reason || '',
+        appleUrl: meta?.appleUrl || '',
       };
     })
   );
@@ -185,6 +257,38 @@ const COLOR_TO_MOOD_LABEL = {
   excited: 'excited',
 };
 
+const PROMPT_MOOD_KEYWORDS = [
+  { mood: 'nostalgic', words: ['autumn', 'fall', 'vintage', 'memory', 'old', 'sonbahar', 'nostalji'] },
+  { mood: 'happy', words: ['paris', 'parisian', 'cafe', 'sun', 'sunny', 'golden', 'laugh', 'mutlu', 'gunes'] },
+  { mood: 'sad', words: ['sad', 'rain', 'lonely', 'heartbreak', 'empty', 'uzgun', 'yalniz', 'huzun'] },
+  { mood: 'calm', words: ['calm', 'quiet', 'peace', 'soft', 'garden', 'sakin', 'huzur'] },
+  { mood: 'excited', words: ['electric', 'party', 'gym', 'adrenaline', 'energetic', 'enerjik', 'heyecan'] },
+  { mood: 'angry', words: ['angry', 'storm', 'chaos', 'rage', 'dark', 'ofke', 'kizgin'] },
+  { mood: 'calm', words: ['dream', 'dreamy', 'fog', 'moon', 'romantic', 'ruya', 'romantik'] },
+];
+
+const normalizePrompt = (value = '') =>
+  value
+    .toLocaleLowerCase('en-US')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const inferMoodLabelFromPrompt = (prompt = '') => {
+  const normalized = normalizePrompt(prompt);
+  let best = null;
+  let bestScore = 0;
+  for (const group of PROMPT_MOOD_KEYWORDS) {
+    const score = group.words.reduce((total, word) => (
+      normalized.includes(normalizePrompt(word)) ? total + word.length : total
+    ), 0);
+    if (score > bestScore) {
+      best = group.mood;
+      bestScore = score;
+    }
+  }
+  return best;
+};
+
 exports.generateVibe = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -208,7 +312,7 @@ exports.generateVibe = asyncHandler(async (req, res) => {
     });
   }
 
-  const moodLabel = COLOR_TO_MOOD_LABEL[vibe.mood.colorKey] || 'calm';
+  const moodLabel = inferMoodLabelFromPrompt(prompt) || COLOR_TO_MOOD_LABEL[vibe.mood.colorKey] || 'calm';
   const intensityNumber = Math.max(1, Math.min(10, Math.round(vibe.mood.intensity * 10)));
 
   const moodLog = await MoodLog.create({
@@ -221,7 +325,7 @@ exports.generateVibe = asyncHandler(async (req, res) => {
   const enrichList = async (items, contentType) =>
     Promise.all(
       (items || []).map(async (s) => {
-        const meta = await enrichRecommendation(s.title, contentType);
+        const meta = await enrichRecommendation(s.title, contentType, s.artist);
         return {
           moodLogId: moodLog._id,
           userId: req.user._id,
@@ -234,6 +338,7 @@ exports.generateVibe = asyncHandler(async (req, res) => {
           genre: s.genre || '',
           aiExplanation: s.reason || '',
           artist: s.artist || '',
+          appleUrl: meta?.appleUrl || '',
         };
       })
     );

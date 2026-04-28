@@ -1,4 +1,5 @@
 import { MOOD_BY_VALUE, MOOD_HEX } from '../utils/constants';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const Stat = ({ label, value, sublabel }) => (
   <div>
@@ -9,16 +10,18 @@ const Stat = ({ label, value, sublabel }) => (
 );
 
 const MoodSummaryCard = ({ summary }) => {
+  const { prefs } = useUserPreferences();
+  const tr = prefs.language === 'tr';
   const mood = summary?.mostFrequentMood ? MOOD_BY_VALUE[summary.mostFrequentMood] : null;
   const moodColor = mood ? MOOD_HEX[mood.value] : '#b9b4a4';
 
   return (
     <div className="card">
-      <h3 className="font-display text-lg font-semibold text-ink-700">Your moods</h3>
+      <h3 className="font-display text-lg font-semibold text-ink-700">{tr ? 'Mood kayıtların' : 'Your moods'}</h3>
       <div className="mt-4 grid grid-cols-3 gap-4">
-        <Stat label="Total" value={summary?.totalMoods ?? 0} />
+        <Stat label={tr ? 'Toplam' : 'Total'} value={summary?.totalMoods ?? 0} />
         <Stat
-          label="Top mood"
+          label={tr ? 'En sık mood' : 'Top mood'}
           value={
             mood ? (
               <span className="flex items-center gap-2">
@@ -28,11 +31,11 @@ const MoodSummaryCard = ({ summary }) => {
                 />
                 {mood.label}
               </span>
-            ) : '—'
+            ) : '-'
           }
-          sublabel={mood ? `${summary.mostFrequentMoodCount}x logged` : 'No data yet'}
+          sublabel={mood ? `${summary.mostFrequentMoodCount}x ${tr ? 'kaydedildi' : 'logged'}` : (tr ? 'Henüz veri yok' : 'No data yet')}
         />
-        <Stat label="Avg intensity" value={summary?.averageIntensity?.toFixed?.(1) ?? '0.0'} />
+        <Stat label={tr ? 'Ortalama yoğunluk' : 'Avg intensity'} value={summary?.averageIntensity?.toFixed?.(1) ?? '0.0'} />
       </div>
     </div>
   );

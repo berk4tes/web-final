@@ -1,8 +1,9 @@
-import IntensityBar from './IntensityBar';
 import SaveVibeButton from './SaveVibeButton';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 import { getVibeColor } from '../utils/constants';
 
 const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
+  const { t } = useUserPreferences();
   if (!mood) return null;
   const color = getVibeColor(mood.colorKey);
 
@@ -18,7 +19,7 @@ const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <span className="section-eyebrow" style={{ color: color.ink }}>
-              Your vibe
+              {t('yourVibe')}
             </span>
             <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink-700 sm:text-5xl">
               {mood.title}
@@ -30,7 +31,7 @@ const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
             )}
             {prompt && (
               <p className="mt-5 max-w-2xl text-sm italic text-ink-400">
-                <span className="not-italic font-medium text-ink-500">Prompt: </span>"{prompt}"
+                <span className="not-italic font-medium text-ink-500">{t('prompt')}: </span>"{prompt}"
               </p>
             )}
           </div>
@@ -51,10 +52,6 @@ const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
             ))}
           </div>
         )}
-
-        <div className="mt-8">
-          <IntensityBar intensity={mood.intensity} colorKey={mood.colorKey} />
-        </div>
       </div>
     </section>
   );

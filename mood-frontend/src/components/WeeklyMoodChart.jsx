@@ -10,17 +10,19 @@ import {
   YAxis,
 } from 'recharts';
 import { MOODS, MOOD_HEX } from '../utils/constants';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const WeeklyMoodChart = ({ days }) => {
+  const { prefs, t } = useUserPreferences();
   const data = (days || []).map((d) => {
     const date = new Date(d.date);
-    const label = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+    const label = date.toLocaleDateString(prefs.language === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short', day: 'numeric' });
     return { day: label, ...d.byMood };
   });
 
   return (
     <div className="card">
-      <h3 className="font-display text-lg font-semibold text-ink-700">Weekly moods</h3>
+      <h3 className="font-display text-lg font-semibold text-ink-700">{t('weeklyMoods')}</h3>
       <div className="mt-4 h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>

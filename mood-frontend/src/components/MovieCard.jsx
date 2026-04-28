@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const POSTER_PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23efeee8%22/><stop offset=%221%22 stop-color=%22%23dcd9cf%22/></linearGradient></defs><rect width=%22200%22 height=%22300%22 fill=%22url(%23g)%22/></svg>';
@@ -21,7 +22,9 @@ const CheckIcon = () => (
   </svg>
 );
 
-const MovieCard = ({ item, onClick, isFavorite, onToggleFavorite, onWatched }) => {
+const MovieCard = ({ item, index = 0, onClick, isFavorite, onToggleFavorite, onWatched }) => {
+  const { prefs } = useUserPreferences();
+  const tr = prefs.language === 'tr';
   const favKey = item.externalId || item.title;
   const favored = isFavorite?.(favKey);
   const [exiting, setExiting] = useState(false);
@@ -43,7 +46,7 @@ const MovieCard = ({ item, onClick, isFavorite, onToggleFavorite, onWatched }) =
   };
 
   return (
-    <div className={exiting ? 'animate-slide-out-left pointer-events-none' : 'animate-scale-in'}>
+    <div className={exiting ? 'animate-slide-out-left pointer-events-none' : index === 4 ? 'animate-slide-in-right' : 'animate-scale-in'}>
       <button
         type="button"
         onClick={() => onClick?.(item)}
@@ -100,7 +103,7 @@ const MovieCard = ({ item, onClick, isFavorite, onToggleFavorite, onWatched }) =
           onClick={handleWatched}
           className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-white py-1.5 text-xs font-medium text-ink-500 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
         >
-          <CheckIcon /> Watched
+          <CheckIcon /> {tr ? 'İzledim' : 'Watched'}
         </button>
       )}
     </div>

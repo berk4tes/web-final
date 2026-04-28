@@ -14,12 +14,14 @@ const SpotifyIcon = () => (
 );
 
 const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
+  const { t } = useUserPreferences();
   const favKey = item.externalId || item.title;
   const favored = isFavorite?.(favKey);
   const artist = item.artist || item.overview || '';
 
   const spotifyTrackQuery = encodeURIComponent(`${item.title} ${artist}`.trim());
   const spotifyTrackUrl = `https://open.spotify.com/search/${spotifyTrackQuery}`;
+  const appleUrl = item.appleUrl || `https://music.apple.com/search?term=${spotifyTrackQuery}`;
 
   const spotifyArtistQuery = encodeURIComponent(artist.trim());
   const spotifyArtistUrl = artist
@@ -36,7 +38,13 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
 
   return (
     <article className="group flex items-center gap-4 rounded-2xl border border-ink-100 bg-white p-3 transition hover:border-accent/30 hover:bg-ink-50/40 hover:shadow-soft">
-      <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl">
+      <a
+        href={spotifyTrackUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl"
+        title="Open track on Spotify"
+      >
         <img
           src={item.poster || MUSIC_PLACEHOLDER}
           alt={item.title}
@@ -44,7 +52,10 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
           loading="lazy"
           onError={(e) => { e.currentTarget.src = MUSIC_PLACEHOLDER; }}
         />
-      </div>
+        <span className="absolute inset-0 grid place-items-center bg-ink-800/50 text-[10px] font-semibold uppercase tracking-wider text-white opacity-0 transition group-hover:opacity-100">
+          Play
+        </span>
+      </a>
 
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-ink-700">{item.title}</h3>
@@ -55,6 +66,7 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="mt-0.5 block truncate text-xs text-ink-400 transition hover:text-[#1DB954] hover:underline"
+            title="Open artist on Spotify"
           >
             {artist}
           </a>
@@ -79,9 +91,19 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
           target="_blank"
           rel="noreferrer"
           className="hidden items-center gap-1.5 rounded-full bg-[#1DB954] px-3 py-2 text-xs font-medium text-white transition hover:brightness-110 sm:inline-flex"
+          title="Open on Spotify"
         >
           <SpotifyIcon />
-          <span>Open</span>
+          <span>{t('spotify')}</span>
+        </a>
+        <a
+          href={appleUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="hidden items-center gap-1.5 rounded-full bg-ink-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-ink-600 sm:inline-flex"
+          title="Open on Apple Music"
+        >
+          <span>{t('apple')}</span>
         </a>
       </div>
     </article>
@@ -89,3 +111,4 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
 };
 
 export default MusicCard;
+import { useUserPreferences } from '../context/UserPreferencesContext';

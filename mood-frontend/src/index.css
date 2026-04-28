@@ -18,6 +18,100 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.ambient-mood-orb {
+  background:
+    radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--mood-accent) 68%, white) 0%, transparent 52%),
+    radial-gradient(circle at 65% 65%, var(--mood-soft) 0%, transparent 62%);
+  filter: blur(30px);
+  opacity: 0.82;
+  transform-origin: center;
+  animation: ambientDrift 9s ease-in-out infinite;
+  transition: background 0.8s ease, opacity 0.8s ease;
+}
+
+.route-transition {
+  animation: routeEnter 0.32s ease-out both;
+}
+
+@keyframes routeEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-shell .card,
+.app-shell .card-flat {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--ink-main);
+}
+
+.app-shell .input,
+.app-shell select.input,
+.app-shell textarea.input {
+  background-color: var(--surface-strong) !important;
+  border-color: var(--border) !important;
+  color: var(--ink-main) !important;
+}
+
+.app-shell .input::placeholder {
+  color: var(--ink-muted);
+}
+
+.app-shell header.sticky {
+  background-color: color-mix(in srgb, var(--surface-strong) 82%, transparent) !important;
+  border-color: var(--border) !important;
+}
+
+.app-shell .bg-white,
+.app-shell .bg-white\/80,
+.app-shell .bg-white\/85,
+.app-shell .bg-white\/90 {
+  background-color: var(--surface-strong) !important;
+}
+
+.app-shell .border-ink-100,
+.app-shell .border-ink-200 {
+  border-color: var(--border) !important;
+}
+
+.theme-dark .text-ink-700,
+.theme-dark .text-ink-600,
+.theme-dark .text-ink-500 {
+  color: var(--ink-main) !important;
+}
+
+.theme-dark .text-ink-400,
+.theme-dark .text-ink-300 {
+  color: var(--ink-muted) !important;
+}
+
+.theme-dark .bg-ink-50,
+.theme-dark .bg-ink-100 {
+  background-color: #29261f !important;
+}
+
+.theme-dark .btn-secondary {
+  background-color: var(--surface-strong) !important;
+  border-color: var(--border) !important;
+  color: var(--ink-main) !important;
+}
+
+@keyframes ambientDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-26px, -22px, 0) scale(1.12);
+  }
+}
+
 /* Toggle switch base */
 .toggle {
   appearance: none;
@@ -113,6 +207,20 @@ body {
   .mask-fade-r {
     -webkit-mask-image: linear-gradient(to right, black 80%, transparent);
     mask-image: linear-gradient(to right, black 80%, transparent);
+  }
+  .animate-slide-in-right {
+    animation: slideInRight 0.38s ease-out both;
+  }
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(34px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 

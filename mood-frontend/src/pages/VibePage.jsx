@@ -11,11 +11,16 @@ import MovieDetailModal from '../components/MovieDetailModal';
 import MusicCard from '../components/MusicCard';
 import SectionHeader from '../components/SectionHeader';
 import { useMoodTheme } from '../context/MoodThemeContext';
+import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import useFavorites from '../hooks/useFavorites';
 import api from '../services/api';
 import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions, getVibeColor } from '../utils/constants';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
+const WATCHED_KEY = 'moodflix.watched';
+const READ_KEY = 'moodflix.readBooks';
+const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
+const VISIBLE_MEDIA_COUNT = 5;
 
 const BookmarkIcon = ({ filled }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,8 +30,9 @@ const BookmarkIcon = ({ filled }) => (
 
 const VibePage = () => {
   const location = useLocation();
-  const { vibeData, setVibe, colorKey, theme } = useMoodTheme();
-  const { isFavorite, toggle } = useFavorites();
+  const { vibeData, setVibe, colorKey, theme, setDraftMoodFromPrompt } = useMoodTheme();
+  const { prefs, t } = useUserPreferences();
+  const { favoriteMap, isFavorite, toggle } = useFavorites();
 
   // Input state
   const [prompt, setPrompt] = useState(() => vibeData?.prompt || '');
@@ -36,7 +42,6 @@ const VibePage = () => {
   // UI state
   const [movieDetail, setMovieDetail] = useState(null);
   const [bookDetail, setBookDetail] = useState(null);
-  const [refinePrompt, setRefinePrompt] = useState('');
   const [savedVibes, setSavedVibes] = useState([]);
 
   // Per-section lists (allow card dismissal without mutating context)
@@ -48,6 +53,28 @@ const VibePage = () => {
   const vibeIdRef = useRef(null);
   const intensityTimerRef = useRef(null);
   const generateRef = useRef(null);
+  const recPrefs = { ...REC_PREFS_DEFAULTS, ...(prefs.recPrefs || {}) };
+
+  const getItemId = (item) => item.externalId || item._id || item.title;
+
+  const getStoredIds = (key) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!Array.isArray(stored)) return new Set();
+      return new Set(stored.map((item) => item.externalId || item.title).filter(Boolean));
+    } catch {
+      return new Set();
+    }
+  };
+
+  const filterAlreadyCollected = (items, extraKey) => {
+    const favorites = new Set(Object.keys(favoriteMap || {}));
+    const extra = extraKey ? getStoredIds(extraKey) : new Set();
+    return (items || []).filter((item) => {
+      const id = getItemId(item);
+      return id && !favorites.has(id) && !extra.has(id);
+    });
+  };
 
   useEffect(() => {
     try {
@@ -70,11 +97,43 @@ const VibePage = () => {
     const id = `${vibeData.prompt}_${vibeData.mood?.title}`;
     if (id !== vibeIdRef.current) {
       vibeIdRef.current = id;
-      setMovieList(vibeData.sections?.movies || []);
-      setBookList(vibeData.sections?.books || []);
-      setMusicList(vibeData.sections?.music || []);
+      let restored = null;
+      try {
+        restored = JSON.parse(localStorage.getItem(VIBE_LISTS_KEY) || 'null');
+      } catch {
+        restored = null;
+      }
+      if (restored?.id === id) {
+        setMovieList(filterAlreadyCollected(restored.movies || [], WATCHED_KEY));
+        setBookList(filterAlreadyCollected(restored.books || [], READ_KEY));
+        setMusicList(filterAlreadyCollected(restored.music || []));
+      } else {
+        setMovieList(filterAlreadyCollected(vibeData.sections?.movies, WATCHED_KEY));
+        setBookList(filterAlreadyCollected(vibeData.sections?.books, READ_KEY));
+        setMusicList(filterAlreadyCollected(vibeData.sections?.music));
+      }
     }
-  }, [vibeData]);
+  }, [vibeData, favoriteMap]);
+
+  useEffect(() => {
+    if (!vibeData || !vibeIdRef.current) return;
+    localStorage.setItem(
+      VIBE_LISTS_KEY,
+      JSON.stringify({
+        id: vibeIdRef.current,
+        movies: movieList,
+        books: bookList,
+        music: musicList,
+      })
+    );
+  }, [vibeData, movieList, bookList, musicList]);
+
+  useEffect(() => {
+    setMovieList((prev) => filterAlreadyCollected(prev, WATCHED_KEY));
+    setBookList((prev) => filterAlreadyCollected(prev, READ_KEY));
+    setMusicList((prev) => filterAlreadyCollected(prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoriteMap]);
 
   const isSaved = useMemo(() => {
     if (!vibeData) return false;
@@ -97,7 +156,12 @@ const VibePage = () => {
       const intensityHint =
         intensityLevel <= 3 ? ' (subtle, understated atmosphere)' :
         intensityLevel >= 8 ? ' (intense, overwhelming atmosphere)' : '';
-      const finalPrompt = value + intensityHint;
+      const preferenceHint = [
+        recPrefs.highMatchOnly ? 'prioritize only high-confidence matches' : '',
+        recPrefs.showNiche && !recPrefs.showPopular ? 'avoid obvious popular picks and choose niche recommendations' : '',
+        recPrefs.showPopular && !recPrefs.showNiche ? 'prioritize recognizable popular recommendations' : '',
+      ].filter(Boolean).join('; ');
+      const finalPrompt = `${value}${intensityHint}${preferenceHint ? ` (${preferenceHint})` : ''}`;
 
       const { data: res } = await api.post('/recommendations/vibe', { prompt: finalPrompt });
       const data = { ...res.data, prompt: value };
@@ -135,15 +199,6 @@ const VibePage = () => {
     }, 1200);
   };
 
-  const handleRefineSubmit = (e) => {
-    e.preventDefault();
-    const val = refinePrompt.trim();
-    if (val.length < 3) return;
-    setPrompt(val);
-    handleGenerate(val);
-    setRefinePrompt('');
-  };
-
   const handleSaveVibe = () => {
     if (!vibeData) return;
     if (isSaved) {
@@ -168,11 +223,9 @@ const VibePage = () => {
     toast.success('Vibe saved');
   };
 
-  const WATCHED_KEY = 'moodflix.watched';
-
   const dismissMovie = (item) => {
-    const id = item._id || item.title;
-    setMovieList((prev) => prev.filter((m) => (m._id || m.title) !== id));
+    const id = getItemId(item);
+    setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
     // Persist to watched list for Dashboard
     try {
       const existing = JSON.parse(localStorage.getItem(WATCHED_KEY) || '[]');
@@ -189,12 +242,56 @@ const VibePage = () => {
     } catch {}
   };
 
-  const dismissBook = (id) => setBookList((prev) => prev.filter((b) => (b._id || b.title) !== id));
+  const dismissBook = (item) => {
+    const id = getItemId(item);
+    setBookList((prev) => prev.filter((b) => getItemId(b) !== id));
+    try {
+      const existing = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+      const entry = {
+        externalId: item.externalId || item.title,
+        title: item.title,
+        thumbnail: item.poster,
+        contentType: 'book',
+        readAt: new Date().toISOString(),
+      };
+      if (!existing.some((b) => (b.externalId || b.title) === (entry.externalId || entry.title))) {
+        localStorage.setItem(READ_KEY, JSON.stringify([entry, ...existing].slice(0, 100)));
+      }
+    } catch {}
+  };
+
+  const handlePromptChange = (value) => {
+    setPrompt(value);
+    setDraftMoodFromPrompt(value);
+  };
+
+  const handleToggleFavoriteAndHide = async (item, contentType) => {
+    const id = getItemId(item);
+    const wasFavorite = isFavorite(id);
+    await toggle({
+      contentType,
+      externalId: id,
+      title: item.title,
+      thumbnail: item.poster || item.thumbnail,
+    });
+    if (!wasFavorite) {
+      if (contentType === 'book') setBookList((prev) => prev.filter((b) => getItemId(b) !== id));
+      if (contentType === 'movie') setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
+      if (contentType === 'music') setMusicList((prev) => prev.filter((m) => getItemId(m) !== id));
+    }
+  };
 
   // Dynamic prompt suggestions based on the current mood colorKey
   const promptSuggestions = colorKey
     ? getPromptSuggestions(colorKey)
     : VIBE_PROMPT_EXAMPLES.slice(0, 4);
+  const visibleSections = vibeData?.sections
+    ? {
+        music: recPrefs.showMusic ? musicList : [],
+        movies: (recPrefs.showMovies || recPrefs.showSeries) ? movieList : [],
+        books: recPrefs.showBooks ? bookList : [],
+      }
+    : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6">
@@ -208,11 +305,10 @@ const VibePage = () => {
 
         <div className="relative max-w-3xl">
           <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-ink-700 text-balance sm:text-6xl">
-            Describe a feeling.<br />
-            Get a playlist, films, and books.
+            {t('heroTitle')}
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-500 text-balance sm:text-lg">
-            Type a mood, atmosphere, or a media reference — we'll interpret the vibe and craft a full discovery moment.
+            {t('heroSubtitle')}
           </p>
 
           <form
@@ -221,21 +317,21 @@ const VibePage = () => {
           >
             <input
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => handlePromptChange(e.target.value)}
               placeholder="Feels like Gilmore Girls in autumn..."
               maxLength={500}
               className="input flex-1 text-base"
               autoFocus
             />
             <button type="submit" disabled={loading} className="btn-accent text-base">
-              {loading ? 'Interpreting...' : 'Generate'}
+              {loading ? t('generating') : t('generate')}
             </button>
           </form>
 
           {/* Emotional intensity slider */}
           <div className="mt-6 flex items-center gap-4">
             <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wider text-ink-400">
-              Intensity
+              {t('intensity')}
             </span>
             <input
               type="range"
@@ -256,7 +352,7 @@ const VibePage = () => {
 
           {/* Prompt suggestions — dynamic based on current mood */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-ink-400">Try:</span>
+            <span className="text-xs font-medium uppercase tracking-wider text-ink-400">{t('try')}</span>
             {promptSuggestions.map((ex) => (
               <button
                 key={ex}
@@ -274,7 +370,7 @@ const VibePage = () => {
 
       {/* Results area */}
       <div id="vibe-results" className="mt-12 space-y-12">
-        {loading && <LoadingVibeState message="Interpreting your atmosphere..." />}
+        {loading && <LoadingVibeState message={t('loadingVibe')} />}
 
         {!loading && !vibeData && (
           <div className="card flex flex-col items-center justify-center py-16 text-center">
@@ -285,10 +381,10 @@ const VibePage = () => {
               </svg>
             </div>
             <h2 className="mt-4 font-display text-2xl font-semibold text-ink-700">
-              Your discovery moment will appear here
+              {t('emptyTitle')}
             </h2>
             <p className="mt-2 max-w-md text-sm text-ink-400">
-              The more evocative the prompt, the richer the vibe. Try citing a feeling, a place, a piece of media, or even a weather.
+              {t('emptyBody')}
             </p>
           </div>
         )}
@@ -302,41 +398,42 @@ const VibePage = () => {
               isSaved={isSaved}
             />
 
-            {musicList.length > 0 && (
+            {recPrefs.showMusic && musicList.length > 0 && (
               <section className="animate-slide-up">
                 <SectionHeader
-                  eyebrow="Soundtrack"
-                  title="A playlist for the moment"
-                  caption="Curated to match the rhythm of your vibe."
+                  eyebrow={t('soundtrack')}
+                  title={t('playlistTitle')}
+                  caption={t('playlistCaption')}
                 />
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  {musicList.map((m) => (
+                  {musicList.slice(0, 10).map((m) => (
                     <MusicCard
                       key={m._id || m.title}
                       item={m}
                       isFavorite={isFavorite}
-                      onToggleFavorite={toggle}
+                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'music')}
                     />
                   ))}
                 </div>
               </section>
             )}
 
-            {movieList.length > 0 && (
+            {(recPrefs.showMovies || recPrefs.showSeries) && movieList.length > 0 && (
               <section className="animate-slide-up">
                 <SectionHeader
-                  eyebrow="Watch"
-                  title="Films & series to escape into"
-                  caption="Hover for a peek, click to dive deeper — never leaves the page."
+                  eyebrow={t('watch')}
+                  title={t('watchTitle')}
+                  caption={t('watchCaption')}
                 />
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {movieList.map((m) => (
+                  {movieList.slice(0, VISIBLE_MEDIA_COUNT).map((m, index) => (
                     <MovieCard
                       key={m._id || m.title}
                       item={m}
+                      index={index}
                       onClick={setMovieDetail}
                       isFavorite={isFavorite}
-                      onToggleFavorite={toggle}
+                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'movie')}
                       onWatched={dismissMovie}
                     />
                   ))}
@@ -344,21 +441,22 @@ const VibePage = () => {
               </section>
             )}
 
-            {bookList.length > 0 && (
+            {recPrefs.showBooks && bookList.length > 0 && (
               <section className="animate-slide-up">
                 <SectionHeader
-                  eyebrow="Read"
-                  title="Books that breathe the same air"
-                  caption="Hand-picked for the texture of this mood."
+                  eyebrow={t('read')}
+                  title={t('readTitle')}
+                  caption={t('readCaption')}
                 />
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {bookList.map((b) => (
+                  {bookList.slice(0, VISIBLE_MEDIA_COUNT).map((b, index) => (
                     <BookCard
                       key={b._id || b.title}
                       item={b}
+                      index={index}
                       onClick={setBookDetail}
                       isFavorite={isFavorite}
-                      onToggleFavorite={toggle}
+                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'book')}
                       onRead={dismissBook}
                     />
                   ))}
@@ -366,24 +464,8 @@ const VibePage = () => {
               </section>
             )}
 
-            <MoodboardGrid sections={vibeData.sections} mood={vibeData.mood} />
+            <MoodboardGrid sections={visibleSections} mood={vibeData.mood} />
 
-            {/* Secondary refine bar */}
-            <section className="card animate-slide-up">
-              <h3 className="font-display text-xl font-semibold text-ink-700">Refine your vibe</h3>
-              <p className="mt-1 text-sm text-ink-400">Adjust the atmosphere with more context.</p>
-              <form onSubmit={handleRefineSubmit} className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <input
-                  value={refinePrompt}
-                  onChange={(e) => setRefinePrompt(e.target.value)}
-                  placeholder="Add more context — a feeling, a place, a sound..."
-                  className="input flex-1"
-                />
-                <button type="submit" disabled={loading} className="btn-primary whitespace-nowrap">
-                  Refine
-                </button>
-              </form>
-            </section>
           </>
         )}
       </div>
@@ -400,7 +482,7 @@ const VibePage = () => {
           }}
         >
           <BookmarkIcon filled={isSaved} />
-          {isSaved ? 'Vibe saved' : 'Save this vibe'}
+          {isSaved ? t('vibeSaved') : t('saveVibe')}
         </button>
       )}
 
