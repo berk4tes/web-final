@@ -31,7 +31,7 @@ const LoginPage = () => {
       toast.success('Welcome back ✨');
       navigate(location.state?.from || '/vibe', { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid email or password');
+      toast.error(err.response?.data?.message || (err.request ? 'Cannot reach server — is the backend running?' : 'Invalid email or password'));
     } finally {
       setSubmitting(false);
     }
