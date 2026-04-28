@@ -1,4 +1,4 @@
-// LoginPage — email + password sign-in form
+// LoginPage — light, centered sign-in card
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -12,14 +12,12 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) {
-    return <Navigate to="/mood" replace />;
-  }
+  if (isAuthenticated) return <Navigate to="/vibe" replace />;
 
   const validate = () => {
     const e = {};
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Geçerli bir email gir';
-    if (form.password.length < 6) e.password = 'Şifre en az 6 karakter olmalı';
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Enter a valid email';
+    if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -30,26 +28,24 @@ const LoginPage = () => {
     setSubmitting(true);
     try {
       await login(form.email, form.password);
-      toast.success('Hoş geldin!');
-      const target = location.state?.from || '/mood';
-      navigate(target, { replace: true });
+      toast.success('Welcome back ✨');
+      navigate(location.state?.from || '/vibe', { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Geçersiz email veya şifre';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-12">
+    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
       <div className="card w-full animate-slide-up">
-        <h1 className="text-2xl font-bold text-white">Tekrar hoş geldin 👋</h1>
-        <p className="mt-1 text-sm text-slate-400">Hesabına giriş yap ve mood'una uygun öneriler keşfet.</p>
+        <h1 className="font-display text-3xl font-semibold text-ink-700">Welcome back</h1>
+        <p className="mt-1 text-sm text-ink-400">Sign in to discover your next vibe.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-300">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-ink-600">
               Email
             </label>
             <input
@@ -59,14 +55,14 @@ const LoginPage = () => {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="input"
-              placeholder="ornek@mail.com"
+              placeholder="you@example.com"
             />
-            {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
+            {errors.email && <p className="mt-1 text-xs text-rose-500">{errors.email}</p>}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-300">
-              Şifre
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-ink-600">
+              Password
             </label>
             <input
               id="password"
@@ -77,18 +73,18 @@ const LoginPage = () => {
               className="input"
               placeholder="••••••"
             />
-            {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
+            {errors.password && <p className="mt-1 text-xs text-rose-500">{errors.password}</p>}
           </div>
 
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+          <button type="submit" disabled={submitting} className="btn-accent w-full">
+            {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-400">
-          Hesabın yok mu?{' '}
-          <Link to="/register" className="font-medium text-purple-300 hover:text-purple-200">
-            Kayıt ol
+        <p className="mt-6 text-center text-sm text-ink-400">
+          New here?{' '}
+          <Link to="/register" className="font-medium text-accent-ink hover:underline">
+            Create an account
           </Link>
         </p>
       </div>

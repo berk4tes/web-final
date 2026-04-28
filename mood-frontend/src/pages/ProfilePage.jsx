@@ -1,4 +1,4 @@
-// ProfilePage — profile editor + favorite list with debounced search
+// ProfilePage — profile editor + favorites list with debounced search (light theme)
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import EmptyState from '../components/EmptyState';
@@ -7,31 +7,31 @@ import useDebounce from '../hooks/useDebounce';
 import api from '../services/api';
 
 const FavoriteCard = ({ fav, onRemove }) => (
-  <div className="card flex flex-col">
+  <article className="card flex flex-col">
     <div className="flex items-start gap-3">
       {fav.thumbnail ? (
         <img
           src={fav.thumbnail}
           alt={fav.title}
-          className="h-20 w-14 flex-shrink-0 rounded-lg object-cover"
+          className="h-20 w-14 flex-shrink-0 rounded-xl object-cover"
         />
       ) : (
-        <div className="grid h-20 w-14 flex-shrink-0 place-items-center rounded-lg bg-slate-800 text-2xl">
-          🎬
+        <div className="grid h-20 w-14 flex-shrink-0 place-items-center rounded-xl bg-ink-100 text-2xl">
+          {fav.contentType === 'book' ? '📘' : fav.contentType === 'music' ? '🎵' : '🎬'}
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white">{fav.title}</h3>
-        <span className="badge mt-2">{fav.contentType}</span>
+        <h3 className="line-clamp-2 text-sm font-semibold text-ink-700">{fav.title}</h3>
+        <span className="chip mt-2">{fav.contentType}</span>
       </div>
     </div>
     <button
       onClick={() => onRemove(fav._id)}
-      className="mt-3 self-end rounded-lg border border-red-900/40 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-900/30"
+      className="mt-3 self-end rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-50"
     >
-      Kaldır
+      Remove
     </button>
-  </div>
+  </article>
 );
 
 const ProfilePage = () => {
@@ -45,37 +45,34 @@ const ProfilePage = () => {
   const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
-    if (user) {
-      setForm({ username: user.username || '', avatar: user.avatar || '' });
-    }
+    if (user) setForm({ username: user.username || '', avatar: user.avatar || '' });
   }, [user]);
 
-  const loadFavorites = async (q) => {
-    setFavoritesLoading(true);
-    try {
-      if (q) {
-        const { data } = await api.get('/favorites/search', { params: { q } });
-        setFavorites(data.data.items);
-      } else {
-        const { data } = await api.get('/favorites', { params: { limit: 100 } });
-        setFavorites(data.data.items);
-      }
-    } catch {
-      toast.error('Favoriler yüklenemedi');
-    } finally {
-      setFavoritesLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadFavorites(debouncedSearch.trim());
+    const load = async () => {
+      setFavoritesLoading(true);
+      try {
+        if (debouncedSearch.trim()) {
+          const { data } = await api.get('/favorites/search', { params: { q: debouncedSearch.trim() } });
+          setFavorites(data.data.items);
+        } else {
+          const { data } = await api.get('/favorites', { params: { limit: 100 } });
+          setFavorites(data.data.items);
+        }
+      } catch {
+        toast.error('Could not load favorites');
+      } finally {
+        setFavoritesLoading(false);
+      }
+    };
+    load();
   }, [debouncedSearch]);
 
   const handleProfileSave = async (ev) => {
     ev.preventDefault();
     if (!user) return;
     if (form.username.trim().length < 3) {
-      toast.error('Kullanıcı adı en az 3 karakter olmalı');
+      toast.error('Username must be at least 3 characters');
       return;
     }
     setSavingProfile(true);
@@ -85,9 +82,9 @@ const ProfilePage = () => {
         avatar: form.avatar.trim(),
       });
       updateUser(data.data.user);
-      toast.success('Profil güncellendi');
+      toast.success('Profile updated');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Güncellenemedi');
+      toast.error(err.response?.data?.message || 'Could not update');
     } finally {
       setSavingProfile(false);
     }
@@ -97,50 +94,45 @@ const ProfilePage = () => {
     try {
       await api.delete(`/favorites/${id}`);
       setFavorites((prev) => prev.filter((f) => f._id !== id));
-      toast.success('Favorilerden kaldırıldı');
+      toast.success('Removed from favorites');
     } catch {
-      toast.error('Kaldırılamadı');
+      toast.error('Could not remove');
     }
   };
 
-  const initials = useMemo(
-    () => (user?.username?.[0] || 'U').toUpperCase(),
-    [user]
-  );
+  const initials = useMemo(() => (user?.username?.[0] || 'U').toUpperCase(), [user]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
       <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Profil</h1>
-        <p className="mt-1 text-sm text-slate-400">Hesap bilgilerini düzenle ve favorilerini yönet.</p>
+        <span className="section-eyebrow">Account</span>
+        <h1 className="section-title mt-2">Profile</h1>
       </div>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
-        <div className="card">
-          <div className="flex flex-col items-center text-center">
-            {form.avatar ? (
-              <img
-                src={form.avatar}
-                alt={user?.username}
-                className="h-24 w-24 rounded-full object-cover ring-2 ring-purple-500/40"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-3xl font-bold text-white">
-                {initials}
-              </div>
-            )}
-            <h2 className="mt-4 text-lg font-semibold text-white">{user?.username}</h2>
-            <p className="text-sm text-slate-400">{user?.email}</p>
-          </div>
+        <div className="card text-center">
+          {form.avatar ? (
+            <img
+              src={form.avatar}
+              alt={user?.username}
+              className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-accent/30"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-accent via-rose-300 to-amber-200 text-3xl font-bold text-white">
+              {initials}
+            </div>
+          )}
+          <h2 className="mt-4 font-display text-xl font-semibold text-ink-700">{user?.username}</h2>
+          <p className="text-sm text-ink-400">{user?.email}</p>
         </div>
 
         <form onSubmit={handleProfileSave} className="card space-y-4">
-          <h3 className="text-base font-semibold text-white">Profili Düzenle</h3>
+          <h3 className="font-display text-lg font-semibold text-ink-700">Edit profile</h3>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Kullanıcı Adı</label>
+            <label className="mb-1 block text-sm font-medium text-ink-600">Username</label>
             <input
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -148,7 +140,7 @@ const ProfilePage = () => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">Avatar URL</label>
+            <label className="mb-1 block text-sm font-medium text-ink-600">Avatar URL</label>
             <input
               value={form.avatar}
               onChange={(e) => setForm({ ...form, avatar: e.target.value })}
@@ -158,20 +150,23 @@ const ProfilePage = () => {
           </div>
           <div className="flex justify-end">
             <button type="submit" disabled={savingProfile} className="btn-primary">
-              {savingProfile ? 'Kaydediliyor...' : 'Kaydet'}
+              {savingProfile ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>
       </section>
 
       <section>
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <h2 className="mr-auto text-xl font-semibold text-white">Favorilerim</h2>
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div className="mr-auto">
+            <span className="section-eyebrow">Library</span>
+            <h2 className="font-display text-2xl font-semibold text-ink-700 mt-1">Favorites</h2>
+          </div>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Başlığa göre ara..."
-            className="input max-w-xs py-2 text-sm"
+            placeholder="Search by title..."
+            className="input max-w-xs"
           />
         </div>
 
@@ -183,9 +178,9 @@ const ProfilePage = () => {
           </div>
         ) : favorites.length === 0 ? (
           <EmptyState
-            icon="💔"
-            title="Henüz favori eklemediniz"
-            description="Önerilerden kalp ikonuna basarak favori ekleyebilirsin."
+            icon="💌"
+            title="No favorites yet"
+            description="Tap the heart on any recommendation to save it here."
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

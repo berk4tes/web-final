@@ -5,12 +5,13 @@ const auth = require('../middleware/auth');
 const { recommendationLimiter } = require('../middleware/rateLimiter');
 const {
   generateRecommendations,
+  generateVibe,
   getHistory,
   getById,
 } = require('../controllers/recommendationController');
 
 const MOOD_LABELS = ['happy', 'sad', 'excited', 'calm', 'angry', 'nostalgic', 'tired'];
-const CONTENT_TYPES = ['movie', 'series', 'music'];
+const CONTENT_TYPES = ['movie', 'series', 'music', 'book'];
 
 const router = express.Router();
 
@@ -25,6 +26,20 @@ router.post(
     body('moodText').optional().isString().isLength({ max: 500 }),
   ],
   generateRecommendations
+);
+
+router.post(
+  '/vibe',
+  auth,
+  recommendationLimiter,
+  [
+    body('prompt')
+      .isString()
+      .trim()
+      .isLength({ min: 3, max: 500 })
+      .withMessage('Prompt must be 3-500 characters'),
+  ],
+  generateVibe
 );
 
 router.get('/history', auth, getHistory);

@@ -209,6 +209,72 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-04-22] UI redesign — light editorial theme + prompt-based vibe flow
+
+- **Konsept değişikliği:** 7 emoji + content type seçici → tek "vibe prompt" input. Kullanıcı "Feels like Gilmore Girls in autumn" gibi metin yazıyor, AI tek seferde mood yorumu + 3 farklı section (music + movies + books) üretiyor.
+- **Backend yeni endpoint:** `POST /api/recommendations/vibe`
+  - [utils/aiService.js](mood-backend/utils/aiService.js): `interpretVibe(prompt)` fonksiyonu eklendi. OpenAI'a structured prompt (mood title + tags + intensity 0-1 + colorKey + 5 music + 5 movies + 5 books). Sanitize + validation içeriyor.
+  - [controllers/recommendationController.js](mood-backend/controllers/recommendationController.js): `generateVibe` controller — vibe → MoodLog kaydet, paralel olarak music/movie/book için enrich (TMDB + Open Library), tüm Recommendation'ları DB'ye kaydet, `{ mood, sections: { music, movies, books } }` döndür.
+  - [routes/recommendationRoutes.js](mood-backend/routes/recommendationRoutes.js): `/vibe` route + validator.
+  - Eski `/mood` endpoint korundu (backward compat).
+- **Frontend tema değişikliği:**
+  - [tailwind.config.js](mood-frontend/tailwind.config.js): yeni `ink` palet (50-800), `accent` purple, mood renkleri yumuşatıldı, `boxShadow.soft` + `glow`, yeni animasyonlar (`orb-spin`, `shimmer`, `slide-up`).
+  - [src/index.css](mood-frontend/src/index.css): koyu tema → açık editorial (Inter + Fraunces display font, radial gradient pastel arka plan, yeni `.btn-primary/.btn-accent/.btn-secondary/.input/.card/.chip/.section-title` utilities).
+  - [index.html](mood-frontend/index.html): `bg-slate-950` → `bg-ink-50`.
+- **Yeni component'lar** ([src/components/](mood-frontend/src/components/)):
+  - `IntensityBar.jsx` — animasyonlu yatay bar, mood color'a göre tinted gradient
+  - `MoodSummary.jsx` — hero card: prompt + AI mood title + tags + intensity + save button
+  - `SaveVibeButton.jsx` — pill CTA, color-keyed
+  - `SectionHeader.jsx` — eyebrow + display title + caption
+  - `MusicCard.jsx` — Spotify-inspired playlist row + "Open in Spotify" link
+  - `MovieCard.jsx` — Netflix hover overlay (synopsis + genre + trailer pill)
+  - `MovieDetailModal.jsx` — inline modal (Esc kapatır), trailer/IMDb/Letterboxd linkleri
+  - `BookCard.jsx` — book cover tile (left-spine shadow detail)
+  - `BookDetailModal.jsx` — inline modal, Open Library + Goodreads linkleri
+  - `MoodboardGrid.jsx` — Pinterest masonry: poster + color swatches + quote tile
+  - `LoadingVibeState.jsx` — soft pulsing orb + "Interpreting your vibe..." metin
+- **Yeni ana sayfa:** [pages/VibePage.jsx](mood-frontend/src/pages/VibePage.jsx)
+  - Hero: free-text prompt + Generate button + 4 örnek prompt chip
+  - Loading state ↔ MoodSummary ↔ Music section (2-col list) ↔ Movies grid (5-col Netflix style) ↔ Books grid ↔ MoodboardGrid
+  - Save vibe → localStorage (`moodflix.savedVibes`), floating CTA button
+  - Modal pattern: movie/book click → inline modal, sayfa değişmez
+- **Restyle edilen sayfalar:**
+  - [Navbar.jsx](mood-frontend/src/components/Navbar.jsx) — sticky açık tema, accent gradient logo, "/mood" → "/vibe"
+  - [LoginPage.jsx](mood-frontend/src/pages/LoginPage.jsx), [RegisterPage.jsx](mood-frontend/src/pages/RegisterPage.jsx) — light card, btn-accent CTA
+  - [DashboardPage.jsx](mood-frontend/src/pages/DashboardPage.jsx) — Streak + summary + chart + Saved vibes (localStorage)
+  - [ProfilePage.jsx](mood-frontend/src/pages/ProfilePage.jsx) — light avatar, favori grid, debounced search
+  - [NotFoundPage.jsx](mood-frontend/src/pages/NotFoundPage.jsx) — minimal 404
+  - [WeeklyMoodChart.jsx](mood-frontend/src/components/WeeklyMoodChart.jsx), [StreakCounter.jsx](mood-frontend/src/components/StreakCounter.jsx), [MoodSummaryCard.jsx](mood-frontend/src/components/MoodSummaryCard.jsx), [EmptyState.jsx](mood-frontend/src/components/EmptyState.jsx), [SkeletonCard.jsx](mood-frontend/src/components/SkeletonCard.jsx) — light theme renklere uyarlandı.
+- **Silinen dosyalar (eski mood seçici akışı):** `pages/MoodInputPage.jsx`, `components/MoodSelector.jsx`, `components/IntensitySlider.jsx`, `components/ResultCard.jsx`, `components/ResultsGrid.jsx`. Yeni VibePage tek başına bu fonksiyonu üstleniyor.
+- [App.jsx](mood-frontend/src/App.jsx): root `/` → `/vibe`, `/mood` → `/vibe` redirect (backward compat).
+- **Build başarılı:** `vite build` → 912 modules, 42.85kB CSS, 641kB JS (gzip 190kB).
+- **End-to-end test:** "Sad but peaceful late-night drive" → mood "Melancholic Journey" (sad, 0.65), 5 müzik (Kasey Musgraves vs.), 5 film (Lost in Translation poster'lı), 5 kitap (The Bell Jar).
+
+### [2026-04-22] Kitap content type + Open Library entegrasyonu
+
+- **Yeni content type:** `book` — backend ve frontend'de eklendi.
+- **Backend değişiklikleri:**
+  - [models/Recommendation.js](mood-backend/models/Recommendation.js): `contentType` enum'una `book` eklendi; `source` enum'una `openlibrary` ve `lastfm` eklendi.
+  - [models/Favorite.js](mood-backend/models/Favorite.js): `contentType` enum'una `book` eklendi.
+  - [routes/recommendationRoutes.js](mood-backend/routes/recommendationRoutes.js) ve [routes/favoriteRoutes.js](mood-backend/routes/favoriteRoutes.js): validator listelerine `book` eklendi.
+  - [controllers/recommendationController.js](mood-backend/controllers/recommendationController.js):
+    - `enrichWithOpenLibrary(title)` fonksiyonu yazıldı: `/search.json?q=...&limit=1` ile arama, `cover_i` üzerinden `https://covers.openlibrary.org/b/id/{id}-L.jpg` cover URL'i, `author_name + first_publish_year` overview alanına.
+    - `enrichRecommendation(title, contentType)` dispatcher: movie/series → TMDB, book → Open Library, music → null (henüz Spotify entegre değil).
+    - `defaultSourceFor(contentType)` helper: source default değeri belirler.
+- **Frontend değişiklikleri:**
+  - [utils/constants.js](mood-frontend/src/utils/constants.js): `CONTENT_TYPES` listesine `{ value: 'book', label: 'Kitap', icon: '📘' }` eklendi.
+  - [pages/MoodInputPage.jsx](mood-frontend/src/pages/MoodInputPage.jsx): content type grid'i `grid-cols-3` → `grid-cols-2 sm:grid-cols-4` yapıldı (4 buton uyacak şekilde).
+- **End-to-end test başarılı ✅:** nostalgic mood + book → 6 öneri (Anne of Green Gables, The Secret Garden vb.), 6/6 cover + yazar/yıl meta verisi geldi.
+- **Eksik:** Music için Spotify ve Last.fm entegrasyonu hala yok — `music` seçilirse poster'sız kayıt oluşur.
+
+### [2026-04-22] OpenAI migration GitHub'a push edildi
+
+- Commit: `37678a1` (`ace8c10..37678a1 main -> main`).
+- 7 dosya değişti: +175 satır / -102 satır.
+- Yeni dosya: [mood-backend/utils/aiService.js](mood-backend/utils/aiService.js).
+- Silinen dosya: `mood-backend/utils/claudeService.js`.
+- Güvenlik kontrolü: hiçbir `.env` dosyası staging'e alınmadı.
+
 ### [2026-04-22] AI provider: Anthropic → OpenAI (end-to-end test başarılı)
 
 - **AI sağlayıcısı değiştirildi:** `@anthropic-ai/sdk` kaldırıldı, `openai@4.104.0` yüklendi.

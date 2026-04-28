@@ -10,7 +10,7 @@ const {
   searchFavorites,
 } = require('../controllers/favoriteController');
 
-const CONTENT_TYPES = ['movie', 'series', 'music'];
+const CONTENT_TYPES = ['movie', 'series', 'music', 'book'];
 
 const router = express.Router();
 

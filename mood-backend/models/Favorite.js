@@ -11,7 +11,7 @@ const favoriteSchema = new mongoose.Schema(
     },
     contentType: {
       type: String,
-      enum: ['movie', 'series', 'music'],
+      enum: ['movie', 'series', 'music', 'book'],
       required: true,
     },
     externalId: { type: String, required: true },

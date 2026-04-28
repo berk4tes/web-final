@@ -8,8 +8,8 @@ const ProtectedRoute = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-[60vh] place-items-center text-slate-400">
-        <div className="animate-pulse text-sm">Yükleniyor...</div>
+      <div className="grid min-h-[60vh] place-items-center text-ink-400">
+        <div className="animate-pulse text-sm">Loading...</div>
       </div>
     );
   }

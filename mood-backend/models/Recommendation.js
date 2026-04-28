@@ -17,14 +17,14 @@ const recommendationSchema = new mongoose.Schema(
     },
     contentType: {
       type: String,
-      enum: ['movie', 'series', 'music'],
+      enum: ['movie', 'series', 'music', 'book'],
       required: true,
     },
     title: { type: String, required: true },
     externalId: { type: String, default: '' },
     source: {
       type: String,
-      enum: ['tmdb', 'spotify'],
+      enum: ['tmdb', 'spotify', 'openlibrary', 'lastfm'],
       default: 'tmdb',
     },
     poster: { type: String, default: '' },

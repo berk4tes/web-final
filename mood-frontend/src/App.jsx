@@ -1,4 +1,4 @@
-// App — router setup with protected routes and toast container
+// App — router setup with protected routes and toast container (light theme)
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
@@ -6,10 +6,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
-import MoodInputPage from './pages/MoodInputPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
+import VibePage from './pages/VibePage';
 
 const App = () => (
   <AuthProvider>
@@ -17,17 +17,18 @@ const App = () => (
       <Navbar />
       <main>
         <Routes>
-          <Route path="/" element={<Navigate to="/mood" replace />} />
+          <Route path="/" element={<Navigate to="/vibe" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
-            path="/mood"
+            path="/vibe"
             element={
               <ProtectedRoute>
-                <MoodInputPage />
+                <VibePage />
               </ProtectedRoute>
             }
           />
+          <Route path="/mood" element={<Navigate to="/vibe" replace />} />
           <Route
             path="/dashboard"
             element={
@@ -51,12 +52,13 @@ const App = () => (
         position="top-right"
         toastOptions={{
           style: {
-            background: '#0f172a',
-            color: '#e2e8f0',
-            border: '1px solid #1e293b',
-            borderRadius: 12,
+            background: 'white',
+            color: '#1f1d18',
+            border: '1px solid #efeee8',
+            borderRadius: 16,
+            boxShadow: '0 8px 24px rgba(20,18,12,0.06)',
           },
-          success: { iconTheme: { primary: '#a855f7', secondary: '#fff' } },
+          success: { iconTheme: { primary: '#7c5cff', secondary: '#fff' } },
         }}
       />
     </div>
