@@ -1,4 +1,5 @@
 // SaveVibeButton — pill-shaped CTA that saves the current vibe (prompt + mood + recs)
+import { useUserPreferences } from '../context/UserPreferencesContext';
 import { getVibeColor } from '../utils/constants';
 
 const BookmarkIcon = ({ filled }) => (
@@ -8,6 +9,7 @@ const BookmarkIcon = ({ filled }) => (
 );
 
 const SaveVibeButton = ({ onClick, isSaved, colorKey = 'calm' }) => {
+  const { t } = useUserPreferences();
   const color = getVibeColor(colorKey);
   return (
     <button
@@ -21,7 +23,7 @@ const SaveVibeButton = ({ onClick, isSaved, colorKey = 'calm' }) => {
       }}
     >
       <BookmarkIcon filled={isSaved} />
-      <span>{isSaved ? 'Vibe saved' : 'Save this vibe'}</span>
+      <span>{isSaved ? t('vibeSaved') : t('saveVibe')}</span>
     </button>
   );
 };

@@ -14,7 +14,7 @@ import { useMoodTheme } from '../context/MoodThemeContext';
 import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import useFavorites from '../hooks/useFavorites';
 import api from '../services/api';
-import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions, getVibeColor } from '../utils/constants';
+import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions } from '../utils/constants';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
 const WATCHED_KEY = 'moodflix.watched';
@@ -22,9 +22,26 @@ const READ_KEY = 'moodflix.readBooks';
 const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
 const VISIBLE_MEDIA_COUNT = 5;
 
-const BookmarkIcon = ({ filled }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+const REFINE_ACTIONS = [
+  { id: 'lighter', labelKey: 'refineLighter', hint: 'similar to this, but lighter and softer' },
+  { id: 'darker', labelKey: 'refineDarker', hint: 'similar to this, but darker and moodier' },
+  { id: 'niche', labelKey: 'refineNiche', hint: 'more niche and less obvious' },
+];
+
+const ChevronIcon = ({ open }) => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`transition-transform ${open ? 'rotate-180' : ''}`}
+    aria-hidden="true"
+  >
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
@@ -38,6 +55,9 @@ const VibePage = () => {
   const [prompt, setPrompt] = useState(() => vibeData?.prompt || '');
   const [intensity, setIntensity] = useState(5);
   const [loading, setLoading] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [activeRefines, setActiveRefines] = useState([]);
+  const [openSections, setOpenSections] = useState({ music: true, movies: true, books: true });
 
   // UI state
   const [movieDetail, setMovieDetail] = useState(null);
@@ -67,12 +87,12 @@ const VibePage = () => {
     }
   };
 
-  const filterAlreadyCollected = (items, extraKey) => {
+  const filterAlreadyCollected = (items, extraKey, includeFavorites = true) => {
     const favorites = new Set(Object.keys(favoriteMap || {}));
     const extra = extraKey ? getStoredIds(extraKey) : new Set();
     return (items || []).filter((item) => {
       const id = getItemId(item);
-      return id && !favorites.has(id) && !extra.has(id);
+      return id && (!includeFavorites || !favorites.has(id)) && !extra.has(id);
     });
   };
 
@@ -106,11 +126,11 @@ const VibePage = () => {
       if (restored?.id === id) {
         setMovieList(filterAlreadyCollected(restored.movies || [], WATCHED_KEY));
         setBookList(filterAlreadyCollected(restored.books || [], READ_KEY));
-        setMusicList(filterAlreadyCollected(restored.music || []));
+        setMusicList(filterAlreadyCollected(restored.music || [], null, false));
       } else {
         setMovieList(filterAlreadyCollected(vibeData.sections?.movies, WATCHED_KEY));
         setBookList(filterAlreadyCollected(vibeData.sections?.books, READ_KEY));
-        setMusicList(filterAlreadyCollected(vibeData.sections?.music));
+        setMusicList(filterAlreadyCollected(vibeData.sections?.music, null, false));
       }
     }
   }, [vibeData, favoriteMap]);
@@ -131,7 +151,7 @@ const VibePage = () => {
   useEffect(() => {
     setMovieList((prev) => filterAlreadyCollected(prev, WATCHED_KEY));
     setBookList((prev) => filterAlreadyCollected(prev, READ_KEY));
-    setMusicList((prev) => filterAlreadyCollected(prev));
+    setMusicList((prev) => filterAlreadyCollected(prev, null, false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favoriteMap]);
 
@@ -142,7 +162,9 @@ const VibePage = () => {
     );
   }, [vibeData, savedVibes]);
 
-  const heroColor = vibeData ? getVibeColor(vibeData.mood?.colorKey) : null;
+  const shownMusic = musicList;
+  const shownMovies = movieList;
+  const shownBooks = bookList;
 
   const handleGenerate = async (overridePrompt, overrideIntensity) => {
     const value = (overridePrompt ?? prompt).trim();
@@ -160,6 +182,9 @@ const VibePage = () => {
         recPrefs.highMatchOnly ? 'prioritize only high-confidence matches' : '',
         recPrefs.showNiche && !recPrefs.showPopular ? 'avoid obvious popular picks and choose niche recommendations' : '',
         recPrefs.showPopular && !recPrefs.showNiche ? 'prioritize recognizable popular recommendations' : '',
+        ...REFINE_ACTIONS
+          .filter((action) => activeRefines.includes(action.id))
+          .map((action) => action.hint),
       ].filter(Boolean).join('; ');
       const finalPrompt = `${value}${intensityHint}${preferenceHint ? ` (${preferenceHint})` : ''}`;
 
@@ -277,8 +302,23 @@ const VibePage = () => {
     if (!wasFavorite) {
       if (contentType === 'book') setBookList((prev) => prev.filter((b) => getItemId(b) !== id));
       if (contentType === 'movie') setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
-      if (contentType === 'music') setMusicList((prev) => prev.filter((m) => getItemId(m) !== id));
     }
+  };
+
+  const toggleRefine = (id) => {
+    setActiveRefines((prev) => (
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    ));
+  };
+
+  const applyRefines = () => {
+    const base = (vibeData?.prompt || prompt).trim();
+    if (!base) return;
+    handleGenerate(base);
+  };
+
+  const toggleSection = (section) => {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   // Dynamic prompt suggestions based on the current mood colorKey
@@ -287,94 +327,155 @@ const VibePage = () => {
     : VIBE_PROMPT_EXAMPLES.slice(0, 4);
   const visibleSections = vibeData?.sections
     ? {
-        music: recPrefs.showMusic ? musicList : [],
-        movies: (recPrefs.showMovies || recPrefs.showSeries) ? movieList : [],
-        books: recPrefs.showBooks ? bookList : [],
+        music: recPrefs.showMusic ? shownMusic : [],
+        movies: (recPrefs.showMovies || recPrefs.showSeries) ? shownMovies : [],
+        books: recPrefs.showBooks ? shownBooks : [],
       }
     : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6">
-      {/* Hero input card */}
-      <section className="relative overflow-hidden rounded-3xl border border-ink-100 bg-white/80 p-8 shadow-soft backdrop-blur sm:p-12">
-        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-accent/8 blur-3xl" />
+    <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
+      {/* Hero input composer */}
+      <section className="relative min-h-[calc(100vh-96px)] overflow-hidden py-8 sm:py-12 lg:py-16">
         <div
-          className="pointer-events-none absolute -right-24 -bottom-24 h-72 w-72 rounded-full blur-3xl transition-colors duration-700"
-          style={{ backgroundColor: theme ? `${theme.soft}88` : 'rgba(230,181,74,0.2)' }}
+          className="pointer-events-none absolute left-1/2 top-8 h-80 w-80 -translate-x-1/2 rounded-full blur-3xl transition-colors duration-700 sm:h-[28rem] sm:w-[28rem]"
+          style={{ backgroundColor: theme ? `${theme.accent}2f` : 'rgba(124,92,255,0.16)' }}
+          aria-hidden
         />
 
-        <div className="relative max-w-3xl">
-          <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-ink-700 text-balance sm:text-6xl">
+        <div className="relative mx-auto flex min-h-[72vh] max-w-4xl flex-col items-center justify-center text-center">
+          <span className="section-eyebrow">{t('moodFirst')}</span>
+          <h1 className="mt-5 max-w-4xl font-display text-5xl font-semibold leading-[0.98] tracking-tight text-ink-700 text-balance sm:text-7xl">
             {t('heroTitle')}
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-500 text-balance sm:text-lg">
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-500 text-balance sm:text-lg">
             {t('heroSubtitle')}
           </p>
 
-          <form
-            onSubmit={(e) => { e.preventDefault(); handleGenerate(); }}
-            className="mt-8 flex flex-col gap-3 sm:flex-row"
-          >
-            <input
-              value={prompt}
-              onChange={(e) => handlePromptChange(e.target.value)}
-              placeholder="Feels like Gilmore Girls in autumn..."
-              maxLength={500}
-              className="input flex-1 text-base"
-              autoFocus
-            />
-            <button type="submit" disabled={loading} className="btn-accent text-base">
-              {loading ? t('generating') : t('generate')}
-            </button>
-          </form>
-
-          {/* Emotional intensity slider */}
-          <div className="mt-6 flex items-center gap-4">
-            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wider text-ink-400">
-              {t('intensity')}
-            </span>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={intensity}
-              onChange={(e) => handleIntensityChange(Number(e.target.value))}
-              className="h-2 flex-1 cursor-pointer rounded-full accent-accent"
-              style={theme ? { accentColor: theme.accent } : {}}
-            />
-            <span
-              className="w-6 text-right text-xs font-semibold tabular-nums"
-              style={{ color: theme ? theme.accent : '#7c5cff' }}
+          <div className="relative mood-console mt-10 w-full min-w-0 text-left">
+            <div className="pointer-events-none absolute -inset-5 rounded-[2.2rem] border border-white/35 opacity-70" />
+            <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full blur-2xl" style={{ backgroundColor: theme?.accent || '#7c5cff' }} />
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleGenerate(); }}
+              className="relative rounded-[2rem] border border-white/50 bg-white/70 p-3 shadow-soft backdrop-blur-xl sm:p-4"
             >
-              {intensity}
-            </span>
-          </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  value={prompt}
+                  onChange={(e) => handlePromptChange(e.target.value)}
+                  placeholder="Feels like Gilmore Girls in autumn..."
+                  maxLength={500}
+                  className="input mood-hero-input min-h-14 flex-1 text-base shadow-none"
+                  autoFocus
+                />
+                <button type="submit" disabled={loading} className="btn-accent min-h-12 shrink-0 px-7 text-base">
+                  {loading ? t('generating') : t('generate')}
+                </button>
+              </div>
+            </form>
 
-          {/* Prompt suggestions — dynamic based on current mood */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-ink-400">{t('try')}</span>
-            {promptSuggestions.map((ex) => (
+            {/* Emotional intensity slider */}
+            <div className="relative mt-4 rounded-[1.6rem] border border-white/45 bg-white/40 p-4 backdrop-blur">
+              <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wider text-ink-400">
+                      {t('intensity')}
+                    </span>
+                    <span
+                      className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-semibold tabular-nums"
+                      style={{ color: theme ? theme.accent : '#7c5cff' }}
+                    >
+                      {intensity}/10
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2" style={{ background: `linear-gradient(90deg, transparent, ${theme?.accent || '#7c5cff'}, transparent)` }} />
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={intensity}
+                      onChange={(e) => handleIntensityChange(Number(e.target.value))}
+                      className="relative h-2 w-full cursor-pointer rounded-full accent-accent"
+                      style={theme ? { accentColor: theme.accent } : {}}
+                    />
+                  </div>
+                </div>
+
+                {/* Prompt suggestions - dynamic based on current mood */}
+                <div className="min-w-0">
+                  <span className="text-xs font-medium uppercase tracking-wider text-ink-400">{t('try')}</span>
+                  <div className="mt-2 flex gap-2 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible">
+                    {promptSuggestions.map((ex) => (
+                      <button
+                        key={ex}
+                        onClick={() => handleGenerate(ex)}
+                        disabled={loading}
+                        className="shrink-0 rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-ink-600 backdrop-blur transition hover:border-accent hover:text-accent-ink disabled:opacity-50 sm:shrink"
+                        style={{ '--tw-ring-color': theme?.accent }}
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
               <button
-                key={ex}
-                onClick={() => handleGenerate(ex)}
-                disabled={loading}
-                className="rounded-full border border-ink-200 bg-white px-3 py-1 text-xs font-medium text-ink-600 transition hover:border-accent hover:text-accent-ink disabled:opacity-50"
-                style={{ '--tw-ring-color': theme?.accent }}
+                type="button"
+                onClick={() => setRefineOpen((value) => !value)}
+                className="flex w-full items-center justify-between gap-4 rounded-2xl border border-ink-100 bg-white/60 px-4 py-3 text-left text-sm font-semibold text-ink-700 backdrop-blur transition hover:border-accent/40"
               >
-                {ex}
+                <span>{t('instantFilter')}</span>
+                <span className="shrink-0 text-xs font-medium text-ink-400">
+                  {activeRefines.length ? `${activeRefines.length} ${t('filterOn')}` : t('filterOff')}
+                </span>
               </button>
-            ))}
+
+              {refineOpen && (
+                <div className="mt-3 rounded-2xl border border-ink-100 bg-white/70 p-3">
+                  <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+                    {REFINE_ACTIONS.map((action) => {
+                      const active = activeRefines.includes(action.id);
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() => toggleRefine(action.id)}
+                          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:shrink ${
+                            active ? 'border-accent bg-accent/10 text-accent-ink' : 'border-ink-200 bg-white text-ink-500 hover:border-accent'
+                          }`}
+                        >
+                          {t(action.labelKey)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyRefines}
+                    disabled={!activeRefines.length || loading}
+                    className="btn-secondary mt-3 w-full disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t('applyFilter')}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Results area */}
-      <div id="vibe-results" className="mt-12 space-y-12">
+      <div id="vibe-results" className="mt-10 space-y-10 sm:mt-12">
         {loading && <LoadingVibeState message={t('loadingVibe')} />}
 
         {!loading && !vibeData && (
-          <div className="card flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 rounded-full bg-ink-100 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-16 w-16 rounded-full bg-white/70 flex items-center justify-center shadow-soft">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7a7565" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 8v4M12 16h.01" />
@@ -392,99 +493,129 @@ const VibePage = () => {
         {vibeData && !loading && (
           <>
             <MoodSummary
-              prompt={vibeData.prompt}
               mood={vibeData.mood}
               onSave={handleSaveVibe}
               isSaved={isSaved}
             />
 
-            {recPrefs.showMusic && musicList.length > 0 && (
-              <section className="animate-slide-up">
-                <SectionHeader
-                  eyebrow={t('soundtrack')}
-                  title={t('playlistTitle')}
-                  caption={t('playlistCaption')}
-                />
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  {musicList.slice(0, 10).map((m) => (
-                    <MusicCard
-                      key={m._id || m.title}
-                      item={m}
-                      isFavorite={isFavorite}
-                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'music')}
-                    />
-                  ))}
+            {recPrefs.showMusic && shownMusic.length > 0 && (
+              <section className="mood-playlist animate-slide-up overflow-hidden rounded-[2rem] border border-white/45 bg-ink-800 p-4 text-white shadow-soft sm:p-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{t('soundtrack')}</span>
+                    <h2 className="mt-2 font-display text-3xl font-semibold">{t('playlistTitle')}</h2>
+                    <p className="mt-1 max-w-xl text-sm text-white/55">{t('playlistCaption')}</p>
+                  </div>
+                  <button type="button" onClick={() => toggleSection('music')} className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10">
+                    <span className="sr-only">{openSections.music ? t('closePlaylist') : t('openPlaylist')}</span>
+                    <span aria-hidden="true">{shownMusic.length}</span>
+                    <ChevronIcon open={openSections.music} />
+                  </button>
                 </div>
+
+                {openSections.music && (
+                  <div className="mt-5 grid gap-3 lg:grid-cols-[280px_1fr]">
+                    <div className="relative aspect-square overflow-hidden rounded-[1.5rem] bg-white/10">
+                      <img
+                        src={shownMusic[0]?.poster}
+                        alt=""
+                        className="h-full w-full object-cover opacity-70"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-ink-800 via-ink-800/20 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">{t('moodQueue')}</span>
+                        <p className="mt-2 font-display text-2xl font-semibold leading-tight">{vibeData.mood?.title}</p>
+                      </div>
+                    </div>
+                    <div className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
+                      {shownMusic.slice(0, 10).map((m, index) => (
+                        <div key={m._id || m.title} className="grid grid-cols-[32px_1fr] items-center gap-2">
+                          <span className="text-right text-xs font-semibold text-white/35">{String(index + 1).padStart(2, '0')}</span>
+                          <MusicCard
+                            item={m}
+                            isFavorite={isFavorite}
+                            onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'music')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
             )}
 
-            {(recPrefs.showMovies || recPrefs.showSeries) && movieList.length > 0 && (
-              <section className="animate-slide-up">
-                <SectionHeader
-                  eyebrow={t('watch')}
-                  title={t('watchTitle')}
-                  caption={t('watchCaption')}
-                />
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {movieList.slice(0, VISIBLE_MEDIA_COUNT).map((m, index) => (
-                    <MovieCard
-                      key={m._id || m.title}
-                      item={m}
-                      index={index}
-                      onClick={setMovieDetail}
-                      isFavorite={isFavorite}
-                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'movie')}
-                      onWatched={dismissMovie}
-                    />
-                  ))}
+            {(recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
+              <section className="mood-cinema animate-slide-up overflow-hidden rounded-[2rem] border border-white/45 p-4 shadow-soft sm:p-5">
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{t('watch')}</span>
+                    <h2 className="mt-2 font-display text-3xl font-semibold text-white">{t('watchTitle')}</h2>
+                    <p className="mt-1 max-w-xl text-sm text-white/55">{t('watchCaption')}</p>
+                  </div>
+                  <button type="button" onClick={() => toggleSection('movies')} className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10">
+                    <span className="sr-only">{openSections.movies ? t('closeStrip') : t('openStrip')}</span>
+                    <ChevronIcon open={openSections.movies} />
+                  </button>
                 </div>
+                {openSections.movies && (
+                  <div className="cinema-strip -mx-4 overflow-x-auto px-4 pb-6">
+                    <div className="flex min-w-max gap-5">
+                      {shownMovies.slice(0, VISIBLE_MEDIA_COUNT).map((m, index) => (
+                        <div key={m._id || m.title} className="w-44 flex-shrink-0 sm:w-52">
+                          <MovieCard
+                            item={m}
+                            index={index}
+                            onClick={setMovieDetail}
+                            isFavorite={isFavorite}
+                            onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'movie')}
+                            onWatched={dismissMovie}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
             )}
 
-            {recPrefs.showBooks && bookList.length > 0 && (
-              <section className="animate-slide-up">
-                <SectionHeader
-                  eyebrow={t('read')}
-                  title={t('readTitle')}
-                  caption={t('readCaption')}
-                />
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {bookList.slice(0, VISIBLE_MEDIA_COUNT).map((b, index) => (
-                    <BookCard
-                      key={b._id || b.title}
-                      item={b}
-                      index={index}
-                      onClick={setBookDetail}
-                      isFavorite={isFavorite}
-                      onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'book')}
-                      onRead={dismissBook}
-                    />
-                  ))}
+            {recPrefs.showBooks && shownBooks.length > 0 && (
+              <section className="animate-slide-up py-3">
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                  <SectionHeader eyebrow={t('read')} title={t('readTitle')} caption={t('readCaption')} />
+                  <button type="button" onClick={() => toggleSection('books')} className="btn-pill">
+                    <span className="sr-only">{openSections.books ? t('closeShelf') : t('openShelf')}</span>
+                    <ChevronIcon open={openSections.books} />
+                  </button>
                 </div>
+                {openSections.books && (
+                  <div className="book-shelf overflow-hidden rounded-[2rem] border border-ink-100/70 px-4 pb-6 pt-6">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+                      {shownBooks.slice(0, VISIBLE_MEDIA_COUNT).map((b, index) => (
+                        <BookCard
+                          key={b._id || b.title}
+                          item={b}
+                          index={index}
+                          onClick={setBookDetail}
+                          isFavorite={isFavorite}
+                          onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'book')}
+                          onRead={dismissBook}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
             )}
 
-            <MoodboardGrid sections={visibleSections} mood={vibeData.mood} />
+            <MoodboardGrid
+              sections={visibleSections}
+              mood={vibeData.mood}
+            />
 
           </>
         )}
       </div>
-
-      {/* Floating save button */}
-      {vibeData && !loading && heroColor && (
-        <button
-          onClick={handleSaveVibe}
-          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium shadow-glow backdrop-blur transition hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: isSaved ? heroColor.accent : 'white',
-            color: isSaved ? 'white' : heroColor.ink,
-            border: `1.5px solid ${heroColor.accent}`,
-          }}
-        >
-          <BookmarkIcon filled={isSaved} />
-          {isSaved ? t('vibeSaved') : t('saveVibe')}
-        </button>
-      )}
 
       <MovieDetailModal item={movieDetail} onClose={() => setMovieDetail(null)} />
       <BookDetailModal

@@ -24,15 +24,15 @@ const moodKeywords = {
 };
 
 const boardLayouts = [
-  'left-[6%] top-[6%] h-[29%] w-[31%] rotate-[-4deg]',
-  'left-[39%] top-[5%] h-[19%] w-[24%] rotate-[3deg]',
-  'right-[7%] top-[7%] h-[33%] w-[27%] rotate-[5deg]',
-  'left-[11%] top-[39%] h-[20%] w-[25%] rotate-[4deg]',
-  'left-[39%] top-[27%] h-[35%] w-[25%] rotate-[-2deg]',
-  'right-[9%] top-[45%] h-[21%] w-[28%] rotate-[-5deg]',
-  'left-[7%] bottom-[7%] h-[27%] w-[31%] rotate-[2deg]',
-  'left-[42%] bottom-[9%] h-[22%] w-[22%] rotate-[5deg]',
-  'right-[7%] bottom-[7%] h-[25%] w-[27%] rotate-[-2deg]',
+  'left-[5%] top-[5%] h-[20%] w-[34%] rotate-[-3deg]',
+  'left-[39%] top-[4%] h-[16%] w-[22%] rotate-[2deg]',
+  'right-[5%] top-[7%] h-[27%] w-[28%] rotate-[4deg]',
+  'left-[8%] top-[29%] h-[18%] w-[28%] rotate-[5deg]',
+  'left-[35%] top-[23%] h-[31%] w-[31%] rotate-[-2deg]',
+  'right-[6%] top-[40%] h-[19%] w-[29%] rotate-[-4deg]',
+  'left-[6%] bottom-[19%] h-[22%] w-[33%] rotate-[2deg]',
+  'left-[38%] bottom-[14%] h-[18%] w-[25%] rotate-[5deg]',
+  'right-[5%] bottom-[6%] h-[27%] w-[31%] rotate-[-3deg]',
 ];
 
 const escapeXml = (value = '') =>
@@ -106,6 +106,34 @@ const downloadSvg = (svg, filename) => {
 
 const svgToDataUrl = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
+const createTextureSvg = ({ color, keyword, index }) => {
+  const safeKeyword = escapeXml(keyword);
+  const rotate = index % 2 ? -18 : 18;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="920" viewBox="0 0 720 920">
+  <defs>
+    <linearGradient id="textureBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7f1e6"/>
+      <stop offset="52%" stop-color="${color.soft}"/>
+      <stop offset="100%" stop-color="#ded4c3"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.16"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="720" height="920" fill="url(#textureBg)"/>
+  <rect width="720" height="920" filter="url(#grain)" opacity="0.32"/>
+  <path d="M98 170 C220 90 322 130 392 226 C470 334 594 320 628 454 C662 588 528 694 382 638 C270 594 166 708 96 594 C28 484 12 260 98 170Z" fill="${color.accent}" opacity="0.18"/>
+  <rect x="96" y="302" width="528" height="18" fill="${color.ink}" opacity="0.12" transform="rotate(${rotate} 360 311)"/>
+  <rect x="96" y="372" width="428" height="12" fill="${color.ink}" opacity="0.11" transform="rotate(${rotate} 310 378)"/>
+  <rect x="96" y="430" width="486" height="12" fill="${color.ink}" opacity="0.1" transform="rotate(${rotate} 340 436)"/>
+  <text x="58" y="790" font-family="Georgia, serif" font-size="72" font-weight="700" fill="${color.ink}" opacity="0.72">${safeKeyword}</text>
+</svg>`;
+};
+
 const printBoardSvg = (svg, title) => {
   const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1100');
   if (!printWindow) {
@@ -145,20 +173,44 @@ const printBoardSvg = (svg, title) => {
   setTimeout(() => printWindow.print(), 250);
 };
 
-const VisualCard = ({ color, variant, children, className = '' }) => {
+const VisualCard = ({ color, variant, children, className = '', flush = false }) => {
   const backgrounds = [
-    `radial-gradient(circle at 28% 24%, ${color.accent}aa, transparent 34%), linear-gradient(145deg, ${color.soft}, #fff)`,
-    `linear-gradient(135deg, ${color.ink}, ${color.accent})`,
-    `repeating-linear-gradient(135deg, ${color.soft}, ${color.soft} 12px, color-mix(in srgb, ${color.accent} 24%, white) 12px, color-mix(in srgb, ${color.accent} 24%, white) 24px)`,
-    `radial-gradient(circle at 70% 30%, #fff8, transparent 26%), radial-gradient(circle at 30% 76%, ${color.ink}66, transparent 32%), ${color.accent}`,
+    `linear-gradient(145deg, #fbf5e8, color-mix(in srgb, ${color.soft} 38%, #f1e7d5))`,
+    `linear-gradient(145deg, color-mix(in srgb, ${color.ink} 88%, #2c2820), color-mix(in srgb, ${color.accent} 34%, #40372b))`,
+    `repeating-linear-gradient(0deg, #f8f1e4 0 12px, #e8decc 12px 13px, #f8f1e4 13px 24px)`,
+    `radial-gradient(circle at 70% 30%, #fff8, transparent 26%), linear-gradient(145deg, color-mix(in srgb, ${color.accent} 25%, #eadfcc), #f6ead7)`,
   ];
 
   return (
     <div
-      className={`absolute overflow-hidden rounded-[28px] border border-white/45 bg-white/70 p-5 shadow-[0_22px_58px_rgba(31,29,24,0.16)] backdrop-blur transition duration-500 hover:z-20 hover:scale-[1.03] ${className}`}
+      className={`absolute overflow-hidden rounded-sm border border-ink-700/10 bg-[#f7f0e3] ${flush ? '' : 'p-4'} shadow-[0_12px_28px_rgba(54,45,33,0.18)] transition duration-500 hover:z-20 hover:scale-[1.03] ${className}`}
       style={{ background: backgrounds[variant % backgrounds.length] }}
     >
       {children}
+    </div>
+  );
+};
+
+const BoardImageCard = ({ color, item, fallbackKeyword, index }) => {
+  const fallback = svgToDataUrl(createTextureSvg({ color, keyword: fallbackKeyword, index }));
+  const src = item?.poster || item?.thumbnail || item?.image || fallback;
+  const title = item?.title || fallbackKeyword;
+
+  return (
+    <div className="group relative h-full w-full overflow-hidden rounded-sm bg-[#efe4d2]">
+      <img
+        src={src}
+        alt={title}
+        className="h-full w-full object-cover saturate-[0.78] sepia-[0.18] contrast-[0.94] transition duration-700 group-hover:scale-105"
+        onError={(e) => {
+          e.currentTarget.src = fallback;
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink-800/46 via-transparent to-[#f7f0e3]/10" />
+      <div className="absolute left-1/2 top-2 h-4 w-16 -translate-x-1/2 rotate-[-6deg] bg-[#f4ead8]/75 shadow-sm" />
+      <p className="absolute bottom-3 left-3 right-3 line-clamp-2 font-display text-base font-semibold leading-tight text-white drop-shadow">
+        {title}
+      </p>
     </div>
   );
 };
@@ -176,6 +228,9 @@ const MoodboardGrid = ({ sections, mood }) => {
     .map((item) => item.title)
     .filter(Boolean)
     .slice(0, 5);
+  const mediaItems = [...(sections?.movies || []), ...(sections?.books || []), ...(sections?.music || [])]
+    .filter((item) => item?.poster || item?.thumbnail || item?.image)
+    .slice(0, 6);
   const tr = prefs.language === 'tr';
   const boardSvg = createBoardSvg({ color, mood, quotes, keywords });
   const boardFilename = `${(mood.title || 'moodboard').toLowerCase().replace(/\s+/g, '-')}-moodboard.svg`;
@@ -226,80 +281,82 @@ const MoodboardGrid = ({ sections, mood }) => {
       </div>
 
       <div
-        className="relative mx-auto aspect-[4/5] w-full max-w-5xl overflow-hidden rounded-[42px] border border-white/45 p-4 shadow-[0_28px_90px_rgba(31,29,24,0.18)]"
+        className="relative mx-auto aspect-[9/14] w-full max-w-[680px] overflow-hidden rounded-[18px] border border-ink-700/10 shadow-[0_22px_70px_rgba(54,45,33,0.18)]"
         style={{
           background:
-            `linear-gradient(135deg, ${color.soft} 0%, color-mix(in srgb, ${color.accent} 22%, white) 42%, color-mix(in srgb, ${color.ink} 18%, white) 100%)`,
+            `linear-gradient(135deg, rgba(255,255,255,0.48), rgba(245,236,220,0.22)), repeating-linear-gradient(0deg, #f6efe4 0 17px, #d7cbbb 17px 18px), repeating-linear-gradient(90deg, transparent 0 82px, rgba(92,76,57,0.08) 82px 83px), color-mix(in srgb, ${color.soft} 34%, #f3eadb)`,
         }}
       >
-        <div className="absolute -left-24 top-8 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: `${color.accent}55` }} />
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full blur-3xl" style={{ backgroundColor: `${color.ink}2f` }} />
+        <div className="absolute inset-0 opacity-[0.18]" style={{ backgroundImage: `radial-gradient(circle at 18% 18%, ${color.accent} 0 2px, transparent 2px), radial-gradient(circle at 82% 72%, ${color.ink} 0 1px, transparent 1px)`, backgroundSize: '34px 34px, 24px 24px' }} />
+        <div className="absolute left-[3%] top-[23%] h-[12%] w-[30%] rotate-[-11deg] border border-ink-700/12 bg-[#fbf5e8]/72 p-2 text-[10px] font-semibold uppercase leading-tight tracking-[0.18em] text-ink-500">
+          {keywords.slice(0, 4).join(' / ')}
+        </div>
+        <div className="absolute bottom-[5%] left-[15%] z-10 w-[42%] rotate-[-2deg] bg-[#f9f1e3] px-4 py-3 text-center font-display text-lg font-semibold leading-tight text-ink-700 shadow-[0_8px_18px_rgba(54,45,33,0.16)]">
+          {quotes[1]}
+        </div>
 
         <VisualCard color={color} variant={0} className={boardLayouts[0]}>
-          <span className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: color.ink }}>
-            {color.label}
-          </span>
-          <h3 className="mt-3 font-display text-4xl font-semibold leading-none" style={{ color: color.ink }}>
-            {mood.title}
-          </h3>
+          <div className="relative z-10">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: color.ink }}>
+              {color.label}
+            </span>
+            <h3 className="mt-2 font-display text-3xl font-semibold leading-none" style={{ color: color.ink }}>
+              {mood.title}
+            </h3>
+          </div>
+          <div className="absolute -bottom-4 -right-3 h-14 w-14 rounded-full border-[12px] border-white/55" style={{ boxShadow: `0 0 0 10px ${color.accent}33` }} />
         </VisualCard>
 
         <VisualCard color={color} variant={1} className={boardLayouts[1]}>
-          <p className="font-display text-2xl font-semibold italic leading-tight text-white">"{quotes[0]}"</p>
+          <p className="font-display text-xl font-semibold italic leading-tight text-white">"{quotes[0]}"</p>
         </VisualCard>
 
-        <VisualCard color={color} variant={2} className={boardLayouts[2]}>
-          <div className="flex h-full flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: color.ink }}>
-              mood notes
-            </span>
+        <VisualCard color={color} variant={2} className={boardLayouts[2]} flush>
+          <BoardImageCard color={color} item={mediaItems[0]} fallbackKeyword={keywords[0]} index={0} />
+        </VisualCard>
+
+        <VisualCard color={color} variant={3} className={boardLayouts[3]} flush>
+          <BoardImageCard color={color} item={mediaItems[1]} fallbackKeyword={keywords[1]} index={1} />
+        </VisualCard>
+
+        <VisualCard color={color} variant={0} className={boardLayouts[4]}>
+          <div className="absolute inset-0 opacity-80" style={{ background: `radial-gradient(circle at 35% 30%, #fff9, transparent 26%), radial-gradient(circle at 68% 72%, ${color.accent}55, transparent 34%)` }} />
+          <div className="relative flex h-full flex-col justify-between">
             <div className="flex flex-wrap gap-2">
-              {keywords.slice(0, 6).map((word) => (
-                <span key={word} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-semibold" style={{ color: color.ink }}>
+              {keywords.slice(0, 5).map((word) => (
+                <span key={word} className="bg-[#f9f1e3]/82 px-2.5 py-1 text-[10px] font-semibold shadow-sm" style={{ color: color.ink }}>
                   {word}
                 </span>
               ))}
             </div>
-          </div>
-        </VisualCard>
-
-        <VisualCard color={color} variant={3} className={boardLayouts[3]}>
-          <p className="font-display text-2xl font-semibold italic leading-tight text-white">"{quotes[1]}"</p>
-        </VisualCard>
-
-        <VisualCard color={color} variant={0} className={boardLayouts[4]}>
-          <div className="absolute inset-0 opacity-80" style={{ background: `radial-gradient(circle at 35% 30%, #fff9, transparent 26%), radial-gradient(circle at 68% 72%, ${color.accent}, transparent 34%)` }} />
-          <div className="relative flex h-full flex-col justify-end">
             <div className="flex gap-2">
               {[color.accent, color.soft, color.ink].map((swatch) => (
-                <span key={swatch} className="h-10 w-10 rounded-full border border-white/70 shadow-sm" style={{ backgroundColor: swatch }} />
+                <span key={swatch} className="h-8 w-8 rounded-full border border-white/70 shadow-sm" style={{ backgroundColor: swatch }} />
               ))}
             </div>
           </div>
         </VisualCard>
 
-        <VisualCard color={color} variant={2} className={boardLayouts[5]}>
-          <div className="grid h-full place-items-center">
-            <div className="h-28 w-28 rounded-full border-[18px] border-white/70" style={{ boxShadow: `0 0 0 18px ${color.accent}66` }} />
-          </div>
+        <VisualCard color={color} variant={2} className={boardLayouts[5]} flush>
+          <BoardImageCard color={color} item={mediaItems[2]} fallbackKeyword={keywords[2]} index={2} />
         </VisualCard>
 
         <VisualCard color={color} variant={1} className={boardLayouts[6]}>
-          <p className="font-display text-3xl font-semibold italic leading-tight text-white">"{quotes[2]}"</p>
+          <p className="font-display text-2xl font-semibold italic leading-tight text-white">"{quotes[2]}"</p>
         </VisualCard>
 
         <VisualCard color={color} variant={0} className={boardLayouts[7]}>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {(titles.length ? titles : keywords.slice(0, 4)).slice(0, 4).map((title) => (
-              <div key={title} className="rounded-2xl bg-white/70 px-3 py-2 text-xs font-semibold shadow-sm" style={{ color: color.ink }}>
+              <div key={title} className="bg-white/70 px-2.5 py-1.5 text-[10px] font-semibold shadow-sm" style={{ color: color.ink }}>
                 {title}
               </div>
             ))}
           </div>
         </VisualCard>
 
-        <VisualCard color={color} variant={3} className={boardLayouts[8]}>
-          <div className="h-full w-full rounded-[22px] border border-white/40" style={{ background: `linear-gradient(160deg, #fff8, transparent), radial-gradient(circle at 50% 50%, ${color.soft}, ${color.accent})` }} />
+        <VisualCard color={color} variant={3} className={boardLayouts[8]} flush>
+          <BoardImageCard color={color} item={mediaItems[3]} fallbackKeyword={keywords[3]} index={3} />
         </VisualCard>
       </div>
 
@@ -316,7 +373,7 @@ const MoodboardGrid = ({ sections, mood }) => {
               onClick={() => setPreviewOpen(false)}
               className="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-ink-700 shadow-soft"
             >
-              {tr ? 'Kapat' : 'Close'}
+              {t('close')}
             </button>
             <img
               src={svgToDataUrl(boardSvg)}

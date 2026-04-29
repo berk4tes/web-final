@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import UserAvatar from './UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
@@ -52,6 +53,7 @@ const Navbar = () => {
           <div className="hidden items-center gap-1 md:flex">
             <NavLink to="/vibe" className={linkClass}>{t('navVibe')}</NavLink>
             <NavLink to="/dashboard" className={linkClass}>{t('navDashboard')}</NavLink>
+            <NavLink to="/motivation" className={linkClass}>{t('navMotivation')}</NavLink>
             <NavLink to="/profile" className={linkClass}>{t('navProfile')}</NavLink>
           </div>
         )}
@@ -71,20 +73,7 @@ const Navbar = () => {
                 to="/profile"
                 className="flex items-center gap-2 rounded-full border border-ink-200 bg-white px-2.5 py-1.5 text-sm text-ink-600 transition hover:bg-ink-50"
               >
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user.username} className="h-7 w-7 rounded-full object-cover" />
-                ) : (
-                  <span
-                    className="grid h-7 w-7 place-items-center rounded-full text-xs font-semibold text-white transition-colors duration-500"
-                    style={{
-                      background: theme
-                        ? `linear-gradient(135deg, ${theme.accent}, ${theme.ink})`
-                        : 'linear-gradient(135deg, #7c5cff, #e87a4d)',
-                    }}
-                  >
-                    {user?.username?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                )}
+                <UserAvatar value={user?.avatar} name={user?.username} className="h-7 w-7 text-xs" />
                 <span className="max-w-[120px] truncate">{user?.username}</span>
               </Link>
               <button onClick={handleLogout} className="btn-ghost">{t('signOut')}</button>
@@ -114,6 +103,7 @@ const Navbar = () => {
             <div className="flex flex-col gap-1">
               <NavLink to="/vibe" onClick={() => setOpen(false)} className={linkClass}>{t('navVibe')}</NavLink>
               <NavLink to="/dashboard" onClick={() => setOpen(false)} className={linkClass}>{t('navDashboard')}</NavLink>
+              <NavLink to="/motivation" onClick={() => setOpen(false)} className={linkClass}>{t('navMotivation')}</NavLink>
               <NavLink to="/profile" onClick={() => setOpen(false)} className={linkClass}>{t('navProfile')}</NavLink>
               {vibeData && (
                 <button

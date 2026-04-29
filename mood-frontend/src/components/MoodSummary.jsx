@@ -2,26 +2,28 @@ import SaveVibeButton from './SaveVibeButton';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { getVibeColor } from '../utils/constants';
 
-const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
+const MoodSummary = ({ mood, onSave, isSaved }) => {
   const { t } = useUserPreferences();
   if (!mood) return null;
   const color = getVibeColor(mood.colorKey);
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-ink-100 bg-white p-8 shadow-soft animate-slide-up sm:p-10">
-      <div
-        className={`pointer-events-none absolute inset-0 opacity-60 bg-gradient-to-br ${color.gradient}`}
-        aria-hidden
-      />
-      <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-white/40 blur-3xl" aria-hidden />
+    <section className="relative animate-slide-up py-4 sm:py-6">
+      <div className="relative overflow-hidden rounded-[2rem] border border-white/45 px-5 py-6 shadow-soft backdrop-blur-xl sm:px-7 sm:py-7">
+        <div
+          className={`pointer-events-none absolute inset-0 opacity-75 bg-gradient-to-br ${color.gradient}`}
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full bg-white/50 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-1 w-full" style={{ backgroundColor: color.accent }} />
 
-      <div className="relative">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="relative flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0 flex-1">
-            <span className="section-eyebrow" style={{ color: color.ink }}>
-              {t('yourVibe')}
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/65 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: color.ink }}>
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color.accent }} />
+              {t('activeMood')}
             </span>
-            <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink-700 sm:text-5xl">
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink-700 text-balance sm:text-5xl">
               {mood.title}
             </h1>
             {mood.summary && (
@@ -29,29 +31,23 @@ const MoodSummary = ({ prompt, mood, onSave, isSaved }) => {
                 {mood.summary}
               </p>
             )}
-            {prompt && (
-              <p className="mt-5 max-w-2xl text-sm italic text-ink-400">
-                <span className="not-italic font-medium text-ink-500">{t('prompt')}: </span>"{prompt}"
-              </p>
+            {mood.tags?.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {mood.tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full bg-white/60 px-3 py-1 text-xs font-semibold tracking-wide"
+                    style={{ color: color.ink }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
           <SaveVibeButton onClick={onSave} isSaved={isSaved} colorKey={mood.colorKey} />
         </div>
-
-        {mood.tags?.length > 0 && (
-          <div className="mt-6 flex flex-wrap gap-2">
-            {mood.tags.map((tag, i) => (
-              <span
-                key={i}
-                className="rounded-full px-3 py-1 text-xs font-medium tracking-wide"
-                style={{ backgroundColor: color.soft, color: color.ink }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </section>
   );

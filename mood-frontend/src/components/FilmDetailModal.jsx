@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const PLACEHOLDER_POSTER =
   'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22><rect width=%22200%22 height=%22300%22 fill=%22%231e293b%22/><text x=%22100%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%23475569%22 font-family=%22sans-serif%22 font-size=%2218%22>Görsel Yok</text></svg>';
@@ -27,6 +29,7 @@ const ExternalLinkIcon = () => (
 const TYPE_LABEL = { movie: 'Film', series: 'Dizi', music: 'Müzik' };
 
 const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
+  const { t } = useUserPreferences();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -65,22 +68,20 @@ const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
       ? `https://letterboxd.com/search/${encodedTitle}/`
       : null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/85 p-4 backdrop-blur-md sm:p-6"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md animate-fade-in" />
-
       <div
-        className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900 shadow-2xl shadow-slate-950 sm:flex-row animate-slide-up"
+        className="relative z-10 flex max-h-[min(680px,90vh)] w-full max-w-2xl flex-col overflow-y-auto overscroll-contain rounded-2xl border border-slate-700/50 bg-slate-900 shadow-2xl shadow-slate-950 sm:flex-row animate-slide-up"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={item.title}
       >
         {/* Poster */}
-        <div className="w-full flex-shrink-0 sm:w-48 lg:w-56">
+        <div className="w-full flex-shrink-0 overflow-hidden sm:sticky sm:top-0 sm:h-[min(500px,82vh)] sm:w-48 lg:w-56">
           <img
             src={item.poster || PLACEHOLDER_POSTER}
             alt={item.title}
@@ -90,7 +91,7 @@ const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
         </div>
 
         {/* Info */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-6 max-h-[70vh] sm:max-h-[520px]">
+        <div className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -109,7 +110,7 @@ const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
             <button
               onClick={onClose}
               className="shrink-0 rounded-full p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-white"
-              aria-label="Kapat"
+              aria-label={t('close')}
             >
               <CloseIcon />
             </button>
@@ -124,7 +125,7 @@ const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
           {item.aiExplanation && (
             <div className="border-l-2 border-purple-500/50 pl-3.5">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-400">
-                Neden sana uygun?
+                {t('whyFits')}
               </p>
               <p className="text-sm leading-relaxed text-slate-300">{item.aiExplanation}</p>
             </div>
@@ -167,12 +168,13 @@ const FilmDetailModal = ({ item, isFavorite, onToggleFavorite, onClose }) => {
               }`}
             >
               <HeartIcon filled={favored} />
-              {favored ? 'Favorilerde' : 'Favoriye Ekle'}
+              {favored ? t('inFavorites') : t('addFavorite')}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

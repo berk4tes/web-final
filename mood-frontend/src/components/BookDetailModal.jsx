@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 const COVER_PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 240%22><rect width=%22160%22 height=%22240%22 fill=%22%23faf0d4%22/></svg>';
@@ -11,6 +13,7 @@ const CloseIcon = () => (
 );
 
 const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
+  const { t } = useUserPreferences();
   useEffect(() => {
     if (!item) return;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -41,31 +44,31 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
       thumbnail: item.poster,
     });
     if (!favored) {
-      toast.success('Saved to your library');
+      toast.success(t('savedToLibrary'));
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-800/40 px-4 py-8 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-ink-800/55 p-4 backdrop-blur-sm animate-fade-in sm:p-6"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl animate-slide-up"
+        className="modal-surface relative max-h-[min(680px,90vh)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl shadow-2xl animate-slide-up"
       >
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t('close')}
           className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink-600 shadow-soft transition hover:bg-white"
         >
           <CloseIcon />
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-[220px_1fr]">
-          <div className="relative aspect-[2/3] w-full bg-ink-100 md:h-auto md:aspect-auto">
+          <div className="relative h-56 w-full overflow-hidden bg-ink-100 sm:h-64 md:sticky md:top-0 md:h-[min(500px,82vh)] md:aspect-auto">
             <img
               src={item.poster || titleCover}
               alt={item.title}
@@ -77,7 +80,7 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
           </div>
 
           <div className="p-6 sm:p-8">
-            <span className="section-eyebrow">Book</span>
+            <span className="section-eyebrow">{t('book')}</span>
             <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">
               {item.title}
             </h2>
@@ -100,7 +103,7 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
                 onClick={handleSaveToLibrary}
                 className={favored ? 'btn-secondary' : 'btn-primary'}
               >
-                {favored ? 'Saved to library' : 'Save to library'}
+                {favored ? t('savedToLibrary') : t('saveToLibrary')}
               </button>
               <a href={goodreadsUrl} target="_blank" rel="noreferrer" className="btn-secondary">
                 Goodreads
@@ -109,7 +112,8 @@ const BookDetailModal = ({ item, onClose, isFavorite, onToggleFavorite }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

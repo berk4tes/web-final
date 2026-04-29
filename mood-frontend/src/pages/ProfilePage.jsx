@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import UserAvatar from '../components/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import api from '../services/api';
+import { AVATAR_PRESETS } from '../utils/avatarPresets';
 
-const REC_PREF_LABEL_KEYS = {
-  showMovies: 'prefMovies',
-  showSeries: 'prefSeries',
-  showBooks: 'prefBooks',
-  showMusic: 'prefMusic',
-  showPopular: 'prefPopular',
-  showNiche: 'prefNiche',
-  highMatchOnly: 'prefHighMatch',
-};
+const REC_PREF_GROUPS = [
+  { id: 'watch', keys: ['showMovies', 'showSeries'], labelKey: 'prefWatch' },
+  { id: 'books', key: 'showBooks', labelKey: 'prefBooks' },
+  { id: 'music', key: 'showMusic', labelKey: 'prefMusic' },
+  { id: 'popular', key: 'showPopular', labelKey: 'prefPopular' },
+  { id: 'niche', key: 'showNiche', labelKey: 'prefNiche' },
+  { id: 'match', key: 'highMatchOnly', labelKey: 'prefHighMatch' },
+];
+
+const PROFILE_STATS = [
+  { label: 'Mood DNA', value: 'Cinematic' },
+  { label: 'Discovery mode', value: 'Curated' },
+  { label: 'Vibe rank', value: 'Level 03' },
+];
 
 const Toggle = ({ checked, onChange }) => (
   <input type="checkbox" className="toggle" checked={checked} onChange={(e) => onChange(e.target.checked)} />
@@ -23,6 +30,7 @@ const ProfilePage = () => {
   const { prefs, savePrefs, t } = useUserPreferences();
   const [form, setForm] = useState({ fullName: '', username: '', avatar: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const [showPwChange, setShowPwChange] = useState(false);
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
 
@@ -45,11 +53,22 @@ const ProfilePage = () => {
       toast.error('Username must be at least 3 characters');
       return;
     }
+    const avatar = form.avatar.trim();
+    if (avatar && !avatar.startsWith('preset:')) {
+      try {
+        const url = new URL(avatar);
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid protocol');
+      } catch {
+        toast.error('Avatar must be a valid image URL');
+        setAvatarError(true);
+        return;
+      }
+    }
     setSavingProfile(true);
     try {
       const { data } = await api.patch(`/users/${user._id}`, {
         username: form.username.trim(),
-        avatar: form.avatar.trim(),
+        avatar,
       });
       updateUser(data.data.user);
       savePrefs({ ...prefs, fullName: form.fullName.trim() });
@@ -74,64 +93,105 @@ const ProfilePage = () => {
     savePrefs({ ...prefs, recPrefs: { ...prefs.recPrefs, [key]: val } });
   };
 
+  const handleRecPrefGroupToggle = (group, val) => {
+    if (group.keys) {
+      savePrefs({
+        ...prefs,
+        recPrefs: {
+          ...prefs.recPrefs,
+          ...Object.fromEntries(group.keys.map((key) => [key, val])),
+        },
+      });
+      return;
+    }
+    handleRecPrefToggle(group.key, val);
+  };
+
+  const getGroupChecked = (group) => {
+    const recPrefs = prefs.recPrefs || REC_PREFS_DEFAULTS;
+    if (group.keys) return group.keys.some((key) => recPrefs[key]);
+    return recPrefs[group.key];
+  };
+
   const initials = useMemo(() => (user?.username?.[0] || 'U').toUpperCase(), [user]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10 px-4 py-10 sm:px-6">
-      <div>
-        <span className="section-eyebrow">{t('account')}</span>
-        <h1 className="section-title mt-2">{t('profileTitle')}</h1>
-        <p className="mt-1 text-sm text-ink-400">{t('profileCaption')}</p>
-      </div>
-
-      {/* Account Info */}
-      <section>
-        <h2 className="font-display text-xl font-semibold text-ink-700 mb-5">{t('accountInfo')}</h2>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
-          {/* Avatar */}
-          <div className="card flex flex-col items-center py-8">
-            {form.avatar ? (
-              <img
-                src={form.avatar}
-                alt={user?.username}
-                className="h-24 w-24 rounded-full object-cover ring-2 ring-accent/30"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-accent via-rose-300 to-amber-200 text-3xl font-bold text-white">
-                {initials}
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
+      <section className="relative overflow-hidden rounded-[2rem] border border-ink-100 bg-white/85 p-5 shadow-soft backdrop-blur sm:p-8">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-rose-300 to-amber-300" />
+        <div className="grid gap-7 lg:grid-cols-[330px_1fr]">
+          <aside className="relative overflow-hidden rounded-[1.75rem] bg-ink-700 p-6 text-white shadow-soft">
+            <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-accent/35 blur-3xl" />
+            <div className="absolute -bottom-20 left-8 h-40 w-40 rounded-full bg-amber-200/20 blur-3xl" />
+            <div className="relative">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">Mood passport</span>
+              <div className="mt-6 flex items-center gap-4">
+                <UserAvatar
+                  value={form.avatar}
+                  name={user?.username || initials}
+                  className="h-24 w-24 text-3xl ring-4 ring-white/15"
+                  onError={() => setAvatarError(true)}
+                />
+                <div className="min-w-0">
+                  <h1 className="font-display text-3xl font-semibold leading-tight">{form.fullName || user?.username}</h1>
+                  <p className="mt-1 truncate text-sm text-white/60">@{user?.username}</p>
+                  <p className="truncate text-xs text-white/40">{user?.email}</p>
+                </div>
               </div>
-            )}
-            <h3 className="mt-4 font-display text-lg font-semibold text-ink-700">{user?.username}</h3>
-            <p className="text-xs text-ink-400">{user?.email}</p>
-          </div>
 
-          {/* Edit form */}
-          <div className="card space-y-5">
+              <div className="mt-7 grid gap-2">
+                {PROFILE_STATS.map((stat) => (
+                  <div key={stat.label} className="flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2.5 backdrop-blur">
+                    <span className="text-xs font-medium text-white/55">{stat.label}</span>
+                    <span className="text-xs font-semibold text-white">{stat.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 rounded-3xl border border-white/10 bg-white/10 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Profile signal</p>
+                <p className="mt-2 font-display text-xl leading-tight">
+                  Your profile shapes the mood lens, not just account details.
+                </p>
+              </div>
+            </div>
+          </aside>
+
+          <div className="space-y-6">
+            <div>
+              <span className="section-eyebrow">{t('account')}</span>
+              <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink-700 sm:text-4xl">
+                {t('profileTitle')}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-ink-400">{t('profileCaption')}</p>
+            </div>
+
             <form onSubmit={handleProfileSave} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-ink-600">{t('fullName')}</label>
-                <input
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  className="input"
-                  placeholder={t('fullName')}
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink-600">{t('fullName')}</label>
+                  <input
+                    value={form.fullName}
+                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                    className="input"
+                    placeholder={t('fullName')}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink-600">{t('username')}</label>
+                  <input
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    className="input"
+                    placeholder="moodlover"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-ink-600">{t('username')}</label>
-                <input
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
-                  className="input"
-                  placeholder="moodlover"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-ink-600">{t('email')}</label>
-                <input value={user?.email || ''} disabled className="input opacity-60 cursor-not-allowed" />
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-[1fr_180px_180px]">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink-600">{t('email')}</label>
+                  <input value={user?.email || ''} disabled className="input cursor-not-allowed opacity-60" />
+                </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-ink-600">{t('language')}</label>
                   <select
@@ -155,16 +215,79 @@ const ProfilePage = () => {
                   </select>
                 </div>
               </div>
-              <div>
+
+              <div className="rounded-[1.5rem] border border-ink-100 bg-white/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-ink-700">{t('avatarStyle')}</label>
+                    <p className="mt-1 text-xs text-ink-400">Choose a profile face that feels like your watch mood.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarError(false);
+                      setForm({ ...form, avatar: '' });
+                    }}
+                    className="btn-pill"
+                  >
+                    Baş harf
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarError(false);
+                      setForm({ ...form, avatar: '' });
+                    }}
+                    className={`grid aspect-square place-items-center rounded-2xl border text-sm font-bold transition hover:-translate-y-0.5 ${
+                      !form.avatar ? 'border-accent bg-accent/10 text-accent-ink' : 'border-ink-100 bg-white text-ink-500'
+                    }`}
+                    aria-label="Use initial avatar"
+                  >
+                    {initials}
+                  </button>
+                  {AVATAR_PRESETS.map((preset) => {
+                    const value = `preset:${preset.id}`;
+                    const selected = form.avatar === value;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setAvatarError(false);
+                          setForm({ ...form, avatar: value });
+                        }}
+                        className={`rounded-2xl border p-1 transition hover:-translate-y-0.5 ${
+                          selected ? 'border-accent bg-accent/10' : 'border-ink-100 bg-white'
+                        }`}
+                        aria-label={`Use ${preset.name} avatar`}
+                      >
+                        <UserAvatar value={value} name={preset.name} className="h-full w-full" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-ink-100 bg-white/70 p-4">
                 <label className="mb-1 block text-sm font-medium text-ink-600">{t('avatarUrl')}</label>
                 <input
-                  value={form.avatar}
-                  onChange={(e) => setForm({ ...form, avatar: e.target.value })}
+                  value={form.avatar.startsWith('preset:') ? '' : form.avatar}
+                  onChange={(e) => {
+                    setAvatarError(false);
+                    setForm({ ...form, avatar: e.target.value });
+                  }}
                   placeholder="https://..."
                   className="input"
                 />
+                <p className={`mt-1 text-xs ${avatarError ? 'text-rose-500' : 'text-ink-400'}`}>
+                  {avatarError
+                    ? 'Bu görsel yüklenemedi. Direkt açılan bir .jpg, .png veya .webp linki dene.'
+                    : 'İnternette herkese açık, direkt görsel linki olmalı.'}
+                </p>
               </div>
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowPwChange((v) => !v)}
@@ -179,7 +302,7 @@ const ProfilePage = () => {
             </form>
 
             {showPwChange && (
-              <form onSubmit={handlePasswordChange} className="border-t border-ink-100 pt-5 space-y-3">
+              <form onSubmit={handlePasswordChange} className="space-y-3 rounded-[1.5rem] border border-ink-100 bg-white/70 p-4">
                 <h4 className="text-sm font-semibold text-ink-600">{t('changePassword')}</h4>
                 <input
                   type="password"
@@ -203,7 +326,7 @@ const ProfilePage = () => {
                   className="input"
                 />
                 <div className="flex justify-end">
-                <button type="submit" className="btn-secondary">{t('saveChanges')}</button>
+                  <button type="submit" className="btn-secondary">{t('saveChanges')}</button>
                 </div>
               </form>
             )}
@@ -212,17 +335,23 @@ const ProfilePage = () => {
       </section>
 
       {/* Recommendation Preferences */}
-      <section className="card">
-        <h2 className="font-display text-xl font-semibold text-ink-700">{t('recommendationPrefs')}</h2>
-        <p className="mt-1 text-sm text-ink-400">{t('recommendationPrefsBody')}</p>
+      <section className="rounded-[2rem] border border-ink-100 bg-white/85 p-5 shadow-soft backdrop-blur sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="section-eyebrow">Discovery console</span>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">{t('recommendationPrefs')}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-ink-400">{t('recommendationPrefsBody')}</p>
+          </div>
+          <span className="chip-accent">MoodFlix tuning</span>
+        </div>
 
-        <div className="mt-6 divide-y divide-ink-100">
-          {Object.entries(REC_PREF_LABEL_KEYS).map(([key, labelKey]) => (
-            <div key={key} className="flex items-center justify-between py-3.5">
-              <span className="text-sm font-medium text-ink-700">{t(labelKey)}</span>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {REC_PREF_GROUPS.map((group) => (
+            <div key={group.id} className="flex items-center justify-between rounded-2xl border border-ink-100 bg-white/70 px-4 py-3">
+              <span className="text-sm font-semibold text-ink-700">{t(group.labelKey)}</span>
               <Toggle
-                checked={(prefs.recPrefs || REC_PREFS_DEFAULTS)[key]}
-                onChange={(val) => handleRecPrefToggle(key, val)}
+                checked={getGroupChecked(group)}
+                onChange={(val) => handleRecPrefGroupToggle(group, val)}
               />
             </div>
           ))}

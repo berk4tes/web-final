@@ -61,6 +61,34 @@ const moodFromColorKey = (colorKey) => ({
   calm: 'calm',
 }[colorKey] || 'calm');
 
+const summaryFromLocal = ({ savedVibes = [], watched = [], readBooks = [] }) => {
+  const counts = new Map();
+  savedVibes.forEach((vibe) => {
+    const key = moodFromColorKey(vibe.mood?.colorKey);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  return {
+    totalMoods: savedVibes.length + watched.length + readBooks.length,
+    mostFrequentMood: top?.[0] || null,
+    mostFrequentMoodCount: top?.[1] || 0,
+    averageIntensity: savedVibes.length
+      ? Number((savedVibes.reduce((sum, vibe) => sum + ((vibe.mood?.intensity || 0.5) * 10), 0) / savedVibes.length).toFixed(2))
+      : 0,
+  };
+};
+
+const streakFromLocal = (savedVibes = []) => {
+  const days = new Set(savedVibes.map((vibe) => localDateKey(vibe.savedAt)).filter(Boolean));
+  let streak = 0;
+  const cursor = new Date();
+  while (days.has(localDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+};
+
 const MoodCalendar = ({ history, language }) => {
   const days = useMemo(() => {
     const today = new Date();
@@ -478,26 +506,6 @@ const DashboardPage = () => {
   const [readBooks, setReadBooks] = useState([]);
   const [moodHistory, setMoodHistory] = useState([]);
 
-  // Load stats
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const [s, sum] = await Promise.all([
-          api.get('/stats/streak'),
-          api.get('/stats/summary'),
-        ]);
-        if (!active) return;
-        setStreak(s.data.data.streak);
-        setSummary(sum.data.data);
-      } catch {
-        toast.error('Could not load stats');
-      }
-    };
-    load();
-    return () => { active = false; };
-  }, []);
-
   useEffect(() => {
     let active = true;
     const loadHistory = async () => {
@@ -527,6 +535,28 @@ const DashboardPage = () => {
       if (Array.isArray(r)) setReadBooks(r);
     } catch {}
   }, []);
+
+  // Load stats, with a quiet local fallback when the analytics API is unavailable.
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const [s, sum] = await Promise.all([
+          api.get('/stats/streak'),
+          api.get('/stats/summary'),
+        ]);
+        if (!active) return;
+        setStreak(s.data.data.streak);
+        setSummary(sum.data.data);
+      } catch {
+        if (!active) return;
+        setStreak(streakFromLocal(savedVibes));
+        setSummary(summaryFromLocal({ savedVibes, watched, readBooks }));
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [savedVibes, watched, readBooks]);
 
   // Load favorites for collection cards and taste profile
   useEffect(() => {

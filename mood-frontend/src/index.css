@@ -18,6 +18,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.app-shell {
+  transition:
+    background-color 900ms var(--route-ease, ease),
+    color 900ms var(--route-ease, ease);
+}
+
+.mood-atmosphere {
+  animation: moodAtmosphere var(--mood-rhythm, 14s) var(--route-ease, ease) infinite alternate;
+  transform-origin: center;
+}
+
+.mood-breath-field {
+  opacity: var(--mood-grain-opacity, 0.18);
+  background:
+    linear-gradient(115deg, transparent 0 38%, color-mix(in srgb, var(--mood-accent) 18%, transparent) 48%, transparent 58%),
+    repeating-linear-gradient(90deg, rgba(31,29,24,0.035) 0 1px, transparent 1px 5px);
+  mix-blend-mode: multiply;
+  animation: moodFieldShift var(--mood-field-rhythm, 19s) linear infinite;
+}
+
 .ambient-mood-orb {
   background:
     radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--mood-accent) 68%, white) 0%, transparent 52%),
@@ -25,22 +45,44 @@ body {
   filter: blur(30px);
   opacity: 0.82;
   transform-origin: center;
-  animation: ambientDrift 9s ease-in-out infinite;
+  animation: ambientDrift var(--mood-rhythm, 9s) ease-in-out infinite;
   transition: background 0.8s ease, opacity 0.8s ease;
 }
 
 .route-transition {
-  animation: routeEnter 0.32s ease-out both;
+  animation: routeEnter var(--route-duration, 0.32s) var(--route-ease, ease-out) both;
 }
 
 @keyframes routeEnter {
   0% {
     opacity: 0;
-    transform: translateY(10px);
+    filter: blur(10px) saturate(0.86);
+    transform: translateY(14px) scale(0.992);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    filter: none;
+    transform: none;
+  }
+}
+
+@keyframes moodAtmosphere {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: saturate(0.96);
+  }
+  100% {
+    transform: translate3d(calc(var(--mood-drift, 24px) * -0.22), calc(var(--mood-drift, 24px) * 0.18), 0) scale(1.035);
+    filter: saturate(1.08);
+  }
+}
+
+@keyframes moodFieldShift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 120px 0, 48px 0;
   }
 }
 
@@ -59,8 +101,113 @@ body {
   color: var(--ink-main) !important;
 }
 
+.app-shell .btn-accent {
+  background-color: var(--mood-accent) !important;
+  color: white !important;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--mood-accent) 28%, transparent) !important;
+}
+
+.app-shell .btn-primary {
+  background-color: color-mix(in srgb, var(--mood-ink) 88%, #1f1d18) !important;
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--mood-accent) 18%, transparent);
+}
+
+.app-shell .chip-accent {
+  background-color: color-mix(in srgb, var(--mood-accent) 14%, transparent) !important;
+  color: var(--mood-ink) !important;
+}
+
+.app-shell .section-eyebrow {
+  color: color-mix(in srgb, var(--mood-ink) 58%, var(--ink-muted)) !important;
+}
+
+.app-shell .toggle:checked {
+  background-color: var(--mood-accent);
+}
+
 .app-shell .input::placeholder {
   color: var(--ink-muted);
+}
+
+.app-shell .mood-hero-input {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.modal-surface {
+  background-color: var(--surface-strong) !important;
+  border: 1px solid var(--border);
+  color: var(--ink-main);
+}
+
+.modal-surface .text-ink-700,
+.modal-surface .text-ink-600,
+.modal-surface .text-ink-500 {
+  color: var(--ink-main) !important;
+}
+
+.modal-surface .text-ink-400 {
+  color: var(--ink-muted) !important;
+}
+
+.mood-console {
+  transform-style: preserve-3d;
+}
+
+.mood-playlist {
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--mood-accent) 34%, transparent), transparent 34%),
+    linear-gradient(145deg, #15140f, color-mix(in srgb, var(--mood-ink) 45%, #15140f)) !important;
+}
+
+.mood-playlist article {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: white !important;
+}
+
+.mood-playlist article h3 {
+  color: white !important;
+}
+
+.mood-playlist article p,
+.mood-playlist article a:not(.bg-\[\#1DB954\]) {
+  color: rgba(255,255,255,0.62) !important;
+}
+
+.cinema-strip {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--mood-ink) 14%, transparent), transparent 12%, transparent 88%, color-mix(in srgb, var(--mood-ink) 14%, transparent)),
+    repeating-linear-gradient(90deg, rgba(31,29,24,0.12) 0 18px, transparent 18px 36px);
+  border-top: 1px solid color-mix(in srgb, var(--mood-accent) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mood-accent) 22%, transparent);
+}
+
+.mood-cinema {
+  background:
+    radial-gradient(circle at 80% 18%, color-mix(in srgb, var(--mood-accent) 30%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--mood-ink) 62%, #15140f), #15140f) !important;
+}
+
+.mood-cinema .cinema-strip {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 14px, transparent 14px 28px),
+    linear-gradient(90deg, rgba(255,255,255,0.06), transparent 18%, transparent 82%, rgba(255,255,255,0.06));
+  border-color: rgba(255,255,255,0.14);
+}
+
+.mood-cinema .btn-pill {
+  background-color: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  color: rgba(255,255,255,0.82) !important;
+}
+
+.book-shelf {
+  background:
+    linear-gradient(to bottom, transparent 0 calc(100% - 24px), color-mix(in srgb, var(--mood-ink) 28%, transparent) calc(100% - 24px) 100%),
+    linear-gradient(135deg, color-mix(in srgb, var(--mood-soft) 68%, white), transparent);
+  box-shadow: inset 0 -26px 34px rgba(31,29,24,0.08);
 }
 
 .app-shell header.sticky {
@@ -69,6 +216,10 @@ body {
 }
 
 .app-shell .bg-white,
+.app-shell .bg-white\/50,
+.app-shell .bg-white\/65,
+.app-shell .bg-white\/70,
+.app-shell .bg-white\/75,
 .app-shell .bg-white\/80,
 .app-shell .bg-white\/85,
 .app-shell .bg-white\/90 {
@@ -108,7 +259,7 @@ body {
     transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(-26px, -22px, 0) scale(1.12);
+    transform: translate3d(calc(var(--mood-drift, 26px) * -1), calc(var(--mood-drift, 22px) * -0.85), 0) scale(1.12);
   }
 }
 
@@ -141,6 +292,10 @@ body {
 }
 .toggle:checked::after {
   transform: translateX(1.125rem);
+}
+
+.app-shell .toggle:checked {
+  background-color: var(--mood-accent);
 }
 
 @layer components {
