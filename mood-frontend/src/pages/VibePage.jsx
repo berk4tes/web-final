@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BookDetailModal from '../components/BookDetailModal';
-import CircularGallery from '../components/CircularGallery';
 import LoadingVibeState from '../components/LoadingVibeState';
 import FilmDetailModal from '../components/FilmDetailModal';
 import { useMoodTheme } from '../context/MoodThemeContext';
@@ -369,10 +368,7 @@ const VibePage = () => {
       ? `https://music.apple.com/search?term=${query}`
       : `https://open.spotify.com/search/${query}`;
   };
-  const movieGalleryItems = shownMovies.slice(0, 10).filter((item) => item.poster).map((item) => ({
-    image: item.poster,
-    text: item.title,
-  }));
+  const moviePosterStack = shownMovies.slice(0, 8).filter((item) => item.poster);
 
   return (
     <div className="vibe-zero-shell">
@@ -413,25 +409,10 @@ const VibePage = () => {
               </button>
             </form>
 
-            <div className="zero-control-flow">
-              <div className="zero-intensity">
-                <div className="zero-intensity-head">
-                  <span>{t('intensity')}</span>
-                  <strong>{intensity}/10</strong>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={intensity}
-                  onChange={(e) => handleIntensityChange(Number(e.target.value))}
-                  className="zero-range"
-                  style={{ accentColor: accent }}
-                />
-              </div>
-
-              <div className="zero-prompts" aria-label={t('try')}>
-                {promptSuggestions.map((ex) => (
+            <div className="zero-prompt-board" aria-label={t('try')}>
+              <span>{t('try')}</span>
+              <div className="zero-prompts">
+                {promptSuggestions.map((ex, index) => (
                   <button
                     key={ex}
                     type="button"
@@ -439,6 +420,7 @@ const VibePage = () => {
                     disabled={loading}
                     className="zero-prompt"
                   >
+                    <strong>{String(index + 1).padStart(2, '0')}</strong>
                     {ex}
                   </button>
                 ))}
@@ -480,6 +462,22 @@ const VibePage = () => {
                   </button>
                 </div>
               )}
+
+              <div className="zero-intensity">
+                <div className="zero-intensity-head">
+                  <span>{t('intensity')}</span>
+                  <strong>{intensity}/10</strong>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={intensity}
+                  onChange={(e) => handleIntensityChange(Number(e.target.value))}
+                  className="zero-range"
+                  style={{ accentColor: accent }}
+                />
+              </div>
             </div>
           </div>
 
@@ -579,6 +577,19 @@ const VibePage = () => {
 
             {(recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
               <section className="zero-chapter zero-cinema" style={{ '--mood-accent-live': accent }}>
+                <div className="cinema-atmosphere" aria-hidden>
+                  <div className="cinema-spotlight cinema-spotlight-left" />
+                  <div className="cinema-spotlight cinema-spotlight-right" />
+                  <div className="cinema-projector">
+                    <span />
+                    <span />
+                  </div>
+                  <div className="popcorn-rain">
+                    {Array.from({ length: 22 }).map((_, index) => (
+                      <span key={index} style={{ '--i': index }} />
+                    ))}
+                  </div>
+                </div>
                 <header className="zero-chapter-head">
                   <span>{t('watch')}</span>
                   <h2>{t('watchTitle')}</h2>
@@ -587,7 +598,7 @@ const VibePage = () => {
 
                 <div className="cinema-runway">
                   <div className="cinema-runway-copy">
-                    <span>{String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}</span>
+                    <span>spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}</span>
                     <h3>{activeMovie?.title}</h3>
                     <p>{activeMovie?.aiExplanation || activeMovie?.overview}</p>
                     <div>
@@ -604,19 +615,38 @@ const VibePage = () => {
                     </div>
                   </div>
 
-                  <div className="cinema-gallery-field">
-                    <CircularGallery
-                      items={movieGalleryItems}
-                      bend={3.2}
-                      textColor="#fff6e8"
-                      borderRadius={0.045}
-                      scrollSpeed={1.9}
-                      scrollEase={0.035}
-                      onActiveIndexChange={(index) => {
-                        const movie = shownMovies.filter((item) => item.poster)[index];
-                        if (movie) setActiveMovieId(getItemId(movie));
-                      }}
-                    />
+                  <div className="cinema-scene-field">
+                    <button
+                      type="button"
+                      className="cinema-main-frame"
+                      onClick={() => activeMovie && setMovieDetail(activeMovie)}
+                    >
+                      {activeMovie?.poster && <img src={activeMovie.poster} alt={activeMovie.title || ''} />}
+                      <span>{prefs.language === 'tr' ? 'Sahneye gir' : 'Enter scene'}</span>
+                    </button>
+                    <div className="cinema-ticket-strip" aria-hidden>
+                      <span>{activeMovie?.contentType || 'movie'}</span>
+                      <span>{activeMovie?.genre || vibeData.mood?.title}</span>
+                      <span>{String(activeMovieIndex + 1).padStart(2, '0')}</span>
+                    </div>
+
+                    <div className="cinema-poster-constellation">
+                      {moviePosterStack.map((movie, index) => {
+                        const active = getItemId(movie) === getItemId(activeMovie);
+                        return (
+                          <button
+                            key={movie._id || movie.title}
+                            type="button"
+                            onClick={() => setActiveMovieId(getItemId(movie))}
+                            className={active ? 'is-active' : ''}
+                            style={{ '--i': index }}
+                          >
+                            <img src={movie.poster} alt={movie.title || ''} />
+                            <span>{movie.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </section>
