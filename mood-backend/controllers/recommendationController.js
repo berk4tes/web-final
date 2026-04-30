@@ -8,16 +8,47 @@ const { generateRecommendations, interpretVibe } = require('../utils/aiService')
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+const TMDB_REGION = process.env.TMDB_REGION || 'TR';
 const OPENLIBRARY_BASE = process.env.OPENLIBRARY_BASE_URL || 'https://openlibrary.org';
 const OPENLIBRARY_COVER_BASE = 'https://covers.openlibrary.org/b/id';
 const ITUNES_BASE = 'https://itunes.apple.com/search';
 const GOOGLE_BOOKS_BASE = 'https://www.googleapis.com/books/v1/volumes';
 
+const pickProviders = (watchProviders = {}) => {
+  const regionData = watchProviders.results?.[TMDB_REGION] || watchProviders.results?.US || {};
+  const groups = [
+    { type: 'stream', items: regionData.flatrate || [] },
+    { type: 'rent', items: regionData.rent || [] },
+    { type: 'buy', items: regionData.buy || [] },
+  ];
+  const firstAvailableGroup = groups.find((group) => group.items.length);
+  const activeGroups = firstAvailableGroup ? [firstAvailableGroup] : [];
+  const uniqueProviders = [];
+  const seen = new Set();
+  activeGroups.forEach((group) => {
+    group.items.forEach((provider) => {
+      if (!provider.provider_name || seen.has(provider.provider_name)) return;
+      seen.add(provider.provider_name);
+      uniqueProviders.push({ ...provider, availabilityType: group.type });
+    });
+  });
+  const picked = uniqueProviders.slice(0, 5);
+  return {
+    providers: picked.map((provider) => provider.provider_name),
+    providerLogos: picked.map((provider) => ({
+      name: provider.provider_name,
+      logo: provider.logo_path ? `${TMDB_IMAGE_BASE}${provider.logo_path}` : '',
+      link: regionData.link || '',
+      type: provider.availabilityType || '',
+    })),
+  };
+};
+
 const enrichWithTmdb = async (title, contentType) => {
   if (!process.env.TMDB_API_KEY) return null;
   if (contentType !== 'movie' && contentType !== 'series') return null;
 
-  const path = contentType === 'movie' ? '/search/movie' : '/search/tv';
+  const path = contentType === 'series' ? '/search/tv' : '/search/multi';
   try {
     const { data } = await axios.get(`${TMDB_BASE}${path}`, {
       params: {
@@ -29,13 +60,46 @@ const enrichWithTmdb = async (title, contentType) => {
       },
       timeout: 8000,
     });
-    const first = (data.results || [])[0];
+    const first = (data.results || []).find((item) => (
+      contentType === 'series'
+        ? item.media_type === 'tv' || item.name
+        : item.media_type === 'movie' || item.media_type === 'tv' || item.title || item.name
+    ));
     if (!first) return null;
+    const mediaType = first.media_type || (contentType === 'series' ? 'tv' : 'movie');
+    const detailPath = mediaType === 'tv' ? `/tv/${first.id}` : `/movie/${first.id}`;
+    const { data: detail } = await axios.get(`${TMDB_BASE}${detailPath}`, {
+      params: {
+        api_key: process.env.TMDB_API_KEY,
+        append_to_response: 'credits,watch/providers',
+        language: 'en-US',
+      },
+      timeout: 8000,
+    });
+    const credits = detail.credits || {};
+    const crew = credits.crew || [];
+    const directors = mediaType === 'tv'
+      ? (detail.created_by || []).map((person) => person.name).filter(Boolean)
+      : crew.filter((person) => person.job === 'Director').map((person) => person.name).filter(Boolean);
+    const runtime = mediaType === 'tv'
+      ? (detail.episode_run_time || [])[0] || null
+      : detail.runtime || null;
+    const date = detail.release_date || detail.first_air_date || first.release_date || first.first_air_date || '';
+    const providerDetails = pickProviders(detail['watch/providers']);
     return {
       source: 'tmdb',
       externalId: String(first.id),
-      poster: first.poster_path ? `${TMDB_IMAGE_BASE}${first.poster_path}` : '',
-      overview: first.overview || '',
+      poster: (detail.poster_path || first.poster_path) ? `${TMDB_IMAGE_BASE}${detail.poster_path || first.poster_path}` : '',
+      overview: detail.overview || first.overview || '',
+      runtime,
+      rating: Number.isFinite(detail.vote_average) ? Number(detail.vote_average.toFixed(1)) : null,
+      releaseYear: date ? String(date).slice(0, 4) : '',
+      directors: directors.slice(0, 2),
+      cast: (credits.cast || []).slice(0, 5).map((person) => person.name).filter(Boolean),
+      providers: providerDetails.providers,
+      providerLogos: providerDetails.providerLogos,
+      genre: (detail.genres || []).slice(0, 2).map((genre) => genre.name).filter(Boolean).join(' / '),
+      mediaType,
     };
   } catch (err) {
     console.warn(`TMDB lookup failed for "${title}":`, err.message);
@@ -195,6 +259,13 @@ exports.generateRecommendations = asyncHandler(async (req, res) => {
         source: meta?.source || defaultSourceFor(contentType),
         poster: meta?.poster || '',
         overview: meta?.overview || '',
+        runtime: meta?.runtime || null,
+        rating: meta?.rating || null,
+        releaseYear: meta?.releaseYear || '',
+        directors: meta?.directors || [],
+        cast: meta?.cast || [],
+        providers: meta?.providers || [],
+        providerLogos: meta?.providerLogos || [],
         genre: s.genre || '',
         aiExplanation: s.reason || '',
         appleUrl: meta?.appleUrl || '',
@@ -335,6 +406,13 @@ exports.generateVibe = asyncHandler(async (req, res) => {
           source: meta?.source || defaultSourceFor(contentType),
           poster: meta?.poster || '',
           overview: meta?.overview || s.artist || '',
+          runtime: meta?.runtime || null,
+          rating: meta?.rating || null,
+          releaseYear: meta?.releaseYear || '',
+          directors: meta?.directors || [],
+          cast: meta?.cast || [],
+          providers: meta?.providers || [],
+          providerLogos: meta?.providerLogos || [],
           genre: s.genre || '',
           aiExplanation: s.reason || '',
           artist: s.artist || '',
@@ -380,4 +458,20 @@ exports.getById = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Recommendation not found' });
   }
   return res.json({ success: true, data: { recommendation: rec } });
+});
+
+exports.getTmdbDetails = asyncHandler(async (req, res) => {
+  const title = String(req.query.title || '').trim();
+  const contentType = req.query.contentType === 'series' ? 'series' : 'movie';
+
+  if (!title) {
+    return res.status(422).json({ success: false, message: 'title query is required' });
+  }
+
+  const details = await enrichWithTmdb(title, contentType);
+  if (!details) {
+    return res.status(404).json({ success: false, message: 'TMDB details not found' });
+  }
+
+  return res.json({ success: true, data: { details } });
 });

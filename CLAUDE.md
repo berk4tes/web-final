@@ -209,6 +209,17 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-04-30] Cinema section full redesign — "The Grand Screening Room"
+
+- **VibePage.jsx** — `zero-cinema` bölümü komple yeniden yazıldı. Eski 2-col (`cinema-runway-copy` + `cinema-scene-field` + dağınık `cinema-poster-constellation`) → yeni 3-col mimarisi: `cinema-tracklist` | `cinema-podium` | `cinema-info`.
+- **Yeni animasyon:** `.cinema-film-strip` — üstte ve altta film şeridi. `@keyframes filmTicker` ile 28s loop, ters yönde bottom strip. Perforasyon delikleri CSS repeating-gradient ile yapıldı.
+- **`cinema-tracklist`:** Müzik bölümündeki `sound-lines` gibi sıralı numara listesi (1-8 film). Aktif satır mood rengiyle vurgulanır, hover'da `padding-left` kayması.
+- **`cinema-podium` + `cinema-screen`:** Büyük poster tam `aspect-ratio: 2/3`, film pervane delikleri her iki kenarda CSS mask + repeating-gradient, hover'da `translateY(-10px)`. `cinema-podium-glow` mood accent rengiyle radial glow.
+- **`cinema-ticket` (yeni tasarım):** Gerçek bilet yapısı — sol stub ("admit one"), ortada "now showing / film adı / genre", sağ stub numara. Altın sarısı zemin, dashed bölen çizgiler, punch-out daireler.
+- **`cinema-curtain-left/right`:** Velvet kırmızı perde efekti `clip-path: polygon` ile; atmosfer katmanına eklendi.
+- **index.css** — `cinema-scene-field`, `cinema-main-frame`, `cinema-ticket-strip`, `cinema-poster-constellation` CSS blokları kaldırıldı. Gruplu seçicilere `cinema-info-eyebrow` ve `cinema-info-actions button` eklendi. Yeni responsive 900px + 720px breakpoint'leri.
+- **Build:** `vite build` → clean, 323.89kB JS, 114.88kB CSS. Sıfır error.
+
 ### [2026-04-28] UI/UX refinement pass — global mood theming, persistence, interaction polish
 
 - **Yeni dosya:** [src/context/MoodThemeContext.jsx](mood-frontend/src/context/MoodThemeContext.jsx) — global mood state yönetimi. Aktif vibe `localStorage` ile persist edilir. `setVibe`, `resetVibe`, `theme`, `colorKey` export edilir.

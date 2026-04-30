@@ -97,6 +97,15 @@ const ThemedWrapper = ({ children }) => {
   );
 };
 
+const AppFooter = () => (
+  <footer className="app-footer relative z-10">
+    <div className="app-footer-inner">
+      <p className="app-footer-copy">&copy; 2026 Luma. All rights reserved.</p>
+      <p className="app-footer-note">Mood-led films, songs, and books.</p>
+    </div>
+  </footer>
+);
+
 const App = () => (
   <AuthProvider>
     <UserPreferencesProvider>
@@ -134,6 +143,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/moodboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/profile"
                 element={
                   <ProtectedRoute>
@@ -144,6 +161,7 @@ const App = () => (
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
+          <AppFooter />
           <Toaster
             position="top-right"
             toastOptions={{

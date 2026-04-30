@@ -30,6 +30,16 @@ const recommendationSchema = new mongoose.Schema(
     poster: { type: String, default: '' },
     appleUrl: { type: String, default: '' },
     overview: { type: String, default: '' },
+    runtime: { type: Number, default: null },
+    rating: { type: Number, default: null },
+    releaseYear: { type: String, default: '' },
+    directors: { type: [String], default: [] },
+    cast: { type: [String], default: [] },
+    providers: { type: [String], default: [] },
+    providerLogos: {
+      type: [{ name: String, logo: String, link: String, type: String }],
+      default: [],
+    },
     genre: { type: String, default: '' },
     aiExplanation: { type: String, default: '' },
     createdAt: {

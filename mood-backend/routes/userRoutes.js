@@ -11,7 +11,7 @@ router.patch(
   auth,
   [
     body('username').optional().isString().trim().isLength({ min: 3, max: 30 }),
-    body('avatar').optional().isString().isLength({ max: 500 }),
+    body('avatar').optional().isString().isLength({ max: 120000 }),
   ],
   updateProfile
 );

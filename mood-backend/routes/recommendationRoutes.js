@@ -6,6 +6,7 @@ const { recommendationLimiter } = require('../middleware/rateLimiter');
 const {
   generateRecommendations,
   generateVibe,
+  getTmdbDetails,
   getHistory,
   getById,
 } = require('../controllers/recommendationController');
@@ -43,6 +44,7 @@ router.post(
 );
 
 router.get('/history', auth, getHistory);
+router.get('/tmdb/details', auth, getTmdbDetails);
 router.get('/:id', auth, getById);
 
 module.exports = router;

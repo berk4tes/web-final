@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BookDetailModal from '../components/BookDetailModal';
 import LoadingVibeState from '../components/LoadingVibeState';
-import FilmDetailModal from '../components/FilmDetailModal';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import useFavorites from '../hooks/useFavorites';
@@ -31,6 +30,7 @@ const VibePage = () => {
   const [prompt, setPrompt] = useState(() => vibeData?.prompt || '');
   const [intensity, setIntensity] = useState(5);
   const [loading, setLoading] = useState(false);
+  const [projectionLoading, setProjectionLoading] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   const [activeRefines, setActiveRefines] = useState([]);
 
@@ -41,6 +41,7 @@ const VibePage = () => {
   const [activeMovieId, setActiveMovieId] = useState(null);
   const [activeMusicId, setActiveMusicId] = useState(null);
   const [activeBookId, setActiveBookId] = useState(null);
+  const [activeScene, setActiveScene] = useState('music');
   const [scrollY, setScrollY] = useState(0);
 
   // Per-section lists allow dismissal without mutating context.
@@ -52,6 +53,7 @@ const VibePage = () => {
   const vibeIdRef = useRef(null);
   const intensityTimerRef = useRef(null);
   const generateRef = useRef(null);
+  const projectionDetailKeyRef = useRef(null);
   const recPrefs = { ...REC_PREFS_DEFAULTS, ...(prefs.recPrefs || {}) };
 
   const getItemId = (item) => item?.externalId || item?._id || item?.title;
@@ -141,19 +143,51 @@ const VibePage = () => {
     );
   }, [vibeData, savedVibes]);
 
-  const shownMusic = musicList;
-  const shownMovies = movieList;
-  const shownBooks = bookList;
+  const rawMusic = vibeData?.sections?.music || [];
+  const rawMovies = vibeData?.sections?.movies || [];
+  const rawBooks = vibeData?.sections?.books || [];
+  const shownMusic = musicList.length ? musicList : rawMusic;
+  const shownMovies = movieList.length ? movieList : rawMovies;
+  const shownBooks = bookList.length ? bookList : rawBooks;
   const activeMovie = shownMovies.find((item) => getItemId(item) === activeMovieId) || shownMovies[0];
   const activeMovieIndex = Math.max(0, shownMovies.findIndex((item) => getItemId(item) === getItemId(activeMovie)));
+  const carouselOffsets =
+    shownMovies.length >= 5 ? [-2, -1, 0, 1, 2] :
+    shownMovies.length === 4 ? [-1, 0, 1, 2] :
+    shownMovies.length === 3 ? [-1, 0, 1] :
+    shownMovies.length === 2 ? [0, 1] :
+    shownMovies.length === 1 ? [0] : [];
+  const cinemaCarouselMovies = carouselOffsets.map((offset) => {
+    const index = (activeMovieIndex + offset + shownMovies.length) % shownMovies.length;
+    return { movie: shownMovies[index], offset };
+  });
   const activeMusic = shownMusic.find((item) => getItemId(item) === activeMusicId) || shownMusic[0];
   const activeBook = shownBooks.find((item) => getItemId(item) === activeBookId) || shownBooks[0];
   const activeBookCover = activeBook?.poster ||
     (activeBook?.title
       ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(activeBook.title)}-L.jpg?default=false`
       : '');
-  const heroFeature = activeMovie || activeBook || shownMusic[0];
-  const heroVisual = heroFeature?.poster || activeBookCover || shownMusic[0]?.poster;
+  const activeBookIndex = Math.max(0, shownBooks.findIndex((item) => getItemId(item) === getItemId(activeBook)));
+  const availableScenes = [
+    recPrefs.showMusic && shownMusic.length > 0
+      ? { id: 'music', label: prefs.language === 'tr' ? 'Müzik' : 'Music', kicker: 'soundtrack' }
+      : null,
+    (recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0
+      ? { id: 'cinema', label: prefs.language === 'tr' ? 'Film / Dizi' : 'Film / Series', kicker: 'spotlight' }
+      : null,
+    recPrefs.showBooks && shownBooks.length > 0
+      ? { id: 'books', label: prefs.language === 'tr' ? 'Kitaplar' : 'Books', kicker: 'storybook' }
+      : null,
+  ].filter(Boolean);
+  const selectedScene = availableScenes.some((scene) => scene.id === activeScene)
+    ? activeScene
+    : availableScenes[0]?.id;
+  const activeSceneIndex = Math.max(0, availableScenes.findIndex((scene) => scene.id === selectedScene));
+  const goToScene = (direction) => {
+    if (!availableScenes.length) return;
+    const nextIndex = (activeSceneIndex + direction + availableScenes.length) % availableScenes.length;
+    setActiveScene(availableScenes[nextIndex].id);
+  };
 
   useEffect(() => {
     if (!shownMovies.length) {
@@ -184,6 +218,58 @@ const VibePage = () => {
       setActiveBookId(getItemId(shownBooks[0]));
     }
   }, [shownBooks, activeBookId]);
+
+  useEffect(() => {
+    if (!availableScenes.length) return;
+    if (!availableScenes.some((scene) => scene.id === activeScene)) {
+      setActiveScene(availableScenes[0].id);
+    }
+  }, [availableScenes, activeScene]);
+
+  useEffect(() => {
+    if (!movieDetail?.title) return;
+    const key = `${movieDetail.contentType || 'movie'}:${movieDetail.title}`;
+    if (projectionDetailKeyRef.current === key) return;
+    projectionDetailKeyRef.current = key;
+
+    let cancelled = false;
+    setProjectionLoading(true);
+    api.get('/recommendations/tmdb/details', {
+      params: {
+        title: movieDetail.title,
+        contentType: movieDetail.contentType || 'movie',
+      },
+    })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const details = data?.data?.details || {};
+        setMovieDetail((prev) => (
+          prev && getItemId(prev) === getItemId(movieDetail)
+            ? {
+                ...prev,
+                ...details,
+                genre: details.genre || prev.genre,
+                aiExplanation: prev.aiExplanation,
+              }
+            : prev
+        ));
+        setMovieList((prev) => prev.map((movie) => (
+          getItemId(movie) === getItemId(movieDetail)
+            ? { ...movie, ...details, genre: details.genre || movie.genre, aiExplanation: movie.aiExplanation }
+            : movie
+        )));
+      })
+      .catch(() => {
+        // Keep the projection usable even if TMDB has no match or the API key is missing.
+      })
+      .finally(() => {
+        if (!cancelled) setProjectionLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieDetail?.title, movieDetail?.contentType]);
 
   useEffect(() => {
     let frame = null;
@@ -368,8 +454,52 @@ const VibePage = () => {
       ? `https://music.apple.com/search?term=${query}`
       : `https://open.spotify.com/search/${query}`;
   };
-  const moviePosterStack = shownMovies.slice(0, 8).filter((item) => item.poster);
-
+  const getGoodreadsSearch = (item) => {
+    const query = encodeURIComponent(`${item?.title || ''} ${item?.author || item?.overview || ''}`.trim());
+    return `https://www.goodreads.com/search?q=${query}`;
+  };
+  const getMovieSearch = (item, service) => {
+    const query = encodeURIComponent(item?.title || '');
+    return service === 'letterboxd'
+      ? `https://letterboxd.com/search/${query}/`
+      : `https://www.imdb.com/find/?q=${query}`;
+  };
+  const projectedMovie = movieDetail;
+  const projectedDirectors = projectedMovie?.directors || [];
+  const projectedCast = projectedMovie?.cast || [];
+  const projectedProviders = projectedMovie?.providers || [];
+  const projectedProviderLogos = projectedMovie?.providerLogos || [];
+  const hasProjectionMetadata = projectedDirectors.length || projectedCast.length || projectedProviders.length || projectedProviderLogos.length;
+  const moodTitle = vibeData?.mood?.title || (prefs.language === 'tr' ? 'bu ruh hali' : 'this mood');
+  const heroHeadline = prefs.language === 'tr'
+    ? 'Bugün nasıl bir sahnenin içindesin?'
+    : 'What kind of scene are you in today?';
+  const heroDescription = prefs.language === 'tr'
+    ? 'Bir his yaz; sana uygun şarkı, film ve kitabı aynı atmosferde bulalım.'
+    : 'Write one feeling; get songs, films, and books in the same atmosphere.';
+  const sceneCopy = {
+    music: {
+      eyebrow: prefs.language === 'tr' ? 'dinlenecekler' : 'listening room',
+      title: prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`,
+      caption: prefs.language === 'tr'
+        ? 'Bu moodun ritmini, temposunu ve arka plandaki küçük sızılarını taşıyan seçimler.'
+        : 'Tracks that carry the tempo, texture, and quiet ache of this mood.',
+    },
+    cinema: {
+      eyebrow: prefs.language === 'tr' ? 'izlenecekler' : 'screening room',
+      title: prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`,
+      caption: prefs.language === 'tr'
+        ? 'Bu hissin ışığına, gölgesine ve temposuna benzeyen film ve diziler.'
+        : 'Films and series matched to the light, shadow, and pace of this feeling.',
+    },
+    books: {
+      eyebrow: prefs.language === 'tr' ? 'okunacaklar' : 'reading room',
+      title: prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`,
+      caption: prefs.language === 'tr'
+        ? 'Bu ruh halinin içinde açılacak sayfalar; biraz kapak, biraz kenar notu, biraz kaçış.'
+        : 'Pages to open inside this mood: part cover, part margin note, part escape.',
+    },
+  };
   return (
     <div className="vibe-zero-shell">
       <section className="vibe-zero-hero" style={{ '--mood-accent-live': accent }}>
@@ -388,29 +518,29 @@ const VibePage = () => {
 
         <div className="vibe-zero-hero-inner">
           <div className="vibe-zero-copy">
-            <span className="zero-kicker">{t('moodFirst')}</span>
-            <h1 className="zero-title">{t('heroTitle')}</h1>
-            <p className="zero-subtitle">{t('heroSubtitle')}</p>
+            <h1 className="zero-title">{heroHeadline}</h1>
+            <p className="zero-subtitle">{heroDescription}</p>
 
             <form
               onSubmit={(e) => { e.preventDefault(); handleGenerate(); }}
               className="zero-command"
             >
+              <span className="zero-command-spark" aria-hidden />
               <input
                 value={prompt}
                 onChange={(e) => handlePromptChange(e.target.value)}
-                placeholder="Feels like late-night cinema, neon rain, soft heartbreak..."
+                placeholder={prefs.language === 'tr' ? 'Gece sineması, neon yağmur, hafif kalp kırıklığı...' : 'Late-night cinema, neon rain, soft heartbreak...'}
                 maxLength={500}
                 className="zero-command-input"
                 autoFocus
               />
               <button type="submit" disabled={loading} className="zero-command-button">
-                {loading ? t('generating') : t('generate')}
+                {loading ? t('generating') : (prefs.language === 'tr' ? 'Moodu çöz' : 'Find my mood')}
               </button>
             </form>
 
             <div className="zero-prompt-board" aria-label={t('try')}>
-              <span>{t('try')}</span>
+              <span>{prefs.language === 'tr' ? 'Şu modda mısın?' : 'Are you in this mood?'}</span>
               <div className="zero-prompts">
                 {promptSuggestions.map((ex, index) => (
                   <button
@@ -452,6 +582,21 @@ const VibePage = () => {
                       </button>
                     );
                   })}
+                  <div className="zero-intensity">
+                    <div className="zero-intensity-head">
+                      <span>{t('intensity')}</span>
+                      <strong>{intensity}/10</strong>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={intensity}
+                      onChange={(e) => handleIntensityChange(Number(e.target.value))}
+                      className="zero-range"
+                      style={{ accentColor: accent }}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={applyRefines}
@@ -462,41 +607,9 @@ const VibePage = () => {
                   </button>
                 </div>
               )}
-
-              <div className="zero-intensity">
-                <div className="zero-intensity-head">
-                  <span>{t('intensity')}</span>
-                  <strong>{intensity}/10</strong>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={intensity}
-                  onChange={(e) => handleIntensityChange(Number(e.target.value))}
-                  className="zero-range"
-                  style={{ accentColor: accent }}
-                />
-              </div>
             </div>
           </div>
 
-          <div className="zero-stage" aria-label="Mood preview">
-            <div className="zero-stage-copy">
-              <span>{heroFeature?.contentType || vibeData?.mood?.label || 'mood signal'}</span>
-              <strong>{heroFeature?.title || vibeData?.mood?.title || 'MoodFlix'}</strong>
-              <p>{heroFeature?.aiExplanation || heroFeature?.overview || t('watchCaption')}</p>
-            </div>
-            <div className="zero-poster zero-poster-back">
-              {shownMovies[1]?.poster && <img src={shownMovies[1].poster} alt="" />}
-            </div>
-            <div className="zero-poster zero-poster-mid">
-              {shownBooks[0]?.poster && <img src={shownBooks[0].poster} alt="" />}
-            </div>
-            <div className="zero-poster zero-poster-front">
-              {heroVisual && <img src={heroVisual} alt={heroFeature?.title || ''} />}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -514,25 +627,69 @@ const VibePage = () => {
         {vibeData && !loading && (
           <>
             <section className="zero-manifesto" style={{ '--mood-accent-live': accent }}>
-              <span className="zero-index">mood decoded</span>
-              <h2>{vibeData.mood?.title}</h2>
-              <p>{vibeData.mood?.description || vibeData.prompt}</p>
-              <div className="zero-manifesto-actions">
-                {(vibeData.mood?.tags || []).slice(0, 5).map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-                <button type="button" onClick={handleSaveVibe}>
-                  {isSaved ? t('vibeSaved') : t('saveVibe')}
-                </button>
+              <div className="mood-orbital-card">
+                <div className="mood-orbital-ring" aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="mood-orbital-copy">
+                  <span className="zero-index">{prefs.language === 'tr' ? 'mood çözüldü' : 'mood decoded'}</span>
+                  <h2>{vibeData.mood?.title}</h2>
+                  <p>{vibeData.mood?.description || vibeData.prompt}</p>
+                </div>
+                <div className="zero-manifesto-actions">
+                  {(vibeData.mood?.tags || []).slice(0, 5).map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                  <button type="button" onClick={handleSaveVibe} className="action-bookmark">
+                    {isSaved ? t('vibeSaved') : t('saveVibe')}
+                  </button>
+                </div>
               </div>
             </section>
 
-            {recPrefs.showMusic && shownMusic.length > 0 && (
+            {availableScenes.length > 0 && (
+              <section
+                className="scene-switcher"
+                style={{ '--mood-accent-live': accent }}
+                aria-label={prefs.language === 'tr' ? 'Öneri sahneleri' : 'Recommendation scenes'}
+              >
+                <button
+                  type="button"
+                  className="scene-arrow scene-arrow-prev"
+                  onClick={() => goToScene(-1)}
+                  aria-label={prefs.language === 'tr' ? 'Önceki sahne' : 'Previous scene'}
+                />
+                <div className="scene-tabs">
+                  {availableScenes.map((scene, index) => (
+                    <button
+                      key={scene.id}
+                      type="button"
+                      className={`scene-tab ${selectedScene === scene.id ? 'is-active' : ''}`}
+                      onClick={() => setActiveScene(scene.id)}
+                    >
+                      <span>{String(index + 1).padStart(2, '0')}</span>
+                      <strong>{scene.label}</strong>
+                      <em>{scene.kicker}</em>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="scene-arrow scene-arrow-next"
+                  onClick={() => goToScene(1)}
+                  aria-label={prefs.language === 'tr' ? 'Sonraki sahne' : 'Next scene'}
+                />
+              </section>
+            )}
+
+            {selectedScene === 'music' && recPrefs.showMusic && shownMusic.length > 0 && (
               <section className="zero-chapter zero-music" style={{ '--mood-accent-live': accent }}>
                 <header className="zero-chapter-head">
-                  <span>soundtrack</span>
-                  <h2>{t('playlistTitle')}</h2>
-                  <p>{t('playlistCaption')}</p>
+                  <span>{sceneCopy.music.eyebrow}</span>
+                  <h2>{sceneCopy.music.title}</h2>
+                  <p>{sceneCopy.music.caption}</p>
                 </header>
 
                 <div className="sound-runway">
@@ -547,7 +704,7 @@ const VibePage = () => {
                       <div>
                         <a href={getMusicSearch(activeMusic, 'spotify')} target="_blank" rel="noreferrer">Spotify</a>
                         <a href={getMusicSearch(activeMusic, 'apple')} target="_blank" rel="noreferrer">Apple Music</a>
-                        <button type="button" onClick={() => activeMusic && handleToggleFavoriteAndHide(activeMusic, 'music')}>
+                        <button type="button" className="action-favorite" onClick={() => activeMusic && handleToggleFavoriteAndHide(activeMusic, 'music')}>
                           {isFavorite(getItemId(activeMusic)) ? t('inFavorites') : t('addFavorite')}
                         </button>
                       </div>
@@ -575,151 +732,314 @@ const VibePage = () => {
               </section>
             )}
 
-            {(recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
+            {selectedScene === 'cinema' && (recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
               <section className="zero-chapter zero-cinema" style={{ '--mood-accent-live': accent }}>
+                {/* Atmosphere: spotlights, projector, curtains, popcorn */}
                 <div className="cinema-atmosphere" aria-hidden>
                   <div className="cinema-spotlight cinema-spotlight-left" />
                   <div className="cinema-spotlight cinema-spotlight-right" />
-                  <div className="cinema-projector">
-                    <span />
-                    <span />
-                  </div>
+                  <div className="cinema-curtain cinema-curtain-left" />
+                  <div className="cinema-curtain cinema-curtain-right" />
+                  <div className="cinema-projector"><span /><span /></div>
                   <div className="popcorn-rain">
-                    {Array.from({ length: 22 }).map((_, index) => (
+                    {Array.from({ length: 14 }).map((_, index) => (
                       <span key={index} style={{ '--i': index }} />
                     ))}
                   </div>
                 </div>
-                <header className="zero-chapter-head">
-                  <span>{t('watch')}</span>
-                  <h2>{t('watchTitle')}</h2>
-                  <p>{t('watchCaption')}</p>
-                </header>
 
-                <div className="cinema-runway">
-                  <div className="cinema-runway-copy">
-                    <span>spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}</span>
-                    <h3>{activeMovie?.title}</h3>
-                    <p>{activeMovie?.aiExplanation || activeMovie?.overview}</p>
-                    <div>
-                      {activeMovie?.genre && <em>{activeMovie.genre}</em>}
-                      <button type="button" onClick={() => activeMovie && setMovieDetail(activeMovie)}>
-                        {prefs.language === 'tr' ? 'Detay' : 'Details'}
-                      </button>
-                      <button type="button" onClick={() => activeMovie && handleToggleFavoriteAndHide(activeMovie, 'movie')}>
-                        {isFavorite(getItemId(activeMovie)) ? t('inFavorites') : t('addFavorite')}
-                      </button>
-                      <button type="button" onClick={() => activeMovie && dismissMovie(activeMovie)}>
-                        {prefs.language === 'tr' ? 'İzledim' : 'Watched'}
-                      </button>
-                    </div>
+                {/* Film strip top */}
+                <div className="cinema-film-strip" aria-hidden>
+                  <div className="cinema-sprockets" />
+                  <div className="cinema-film-ticker">
+                    {[...shownMovies, ...shownMovies, ...shownMovies].map((m, i) => (
+                      <span key={i}>{m.title}</span>
+                    ))}
                   </div>
-
-                  <div className="cinema-scene-field">
-                    <button
-                      type="button"
-                      className="cinema-main-frame"
-                      onClick={() => activeMovie && setMovieDetail(activeMovie)}
-                    >
-                      {activeMovie?.poster && <img src={activeMovie.poster} alt={activeMovie.title || ''} />}
-                      <span>{prefs.language === 'tr' ? 'Sahneye gir' : 'Enter scene'}</span>
-                    </button>
-                    <div className="cinema-ticket-strip" aria-hidden>
-                      <span>{activeMovie?.contentType || 'movie'}</span>
-                      <span>{activeMovie?.genre || vibeData.mood?.title}</span>
-                      <span>{String(activeMovieIndex + 1).padStart(2, '0')}</span>
-                    </div>
-
-                    <div className="cinema-poster-constellation">
-                      {moviePosterStack.map((movie, index) => {
-                        const active = getItemId(movie) === getItemId(activeMovie);
-                        return (
-                          <button
-                            key={movie._id || movie.title}
-                            type="button"
-                            onClick={() => setActiveMovieId(getItemId(movie))}
-                            className={active ? 'is-active' : ''}
-                            style={{ '--i': index }}
-                          >
-                            <img src={movie.poster} alt={movie.title || ''} />
-                            <span>{movie.title}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <div className="cinema-sprockets" />
                 </div>
-              </section>
-            )}
 
-            {recPrefs.showBooks && shownBooks.length > 0 && (
-              <section className="zero-chapter zero-books" style={{ '--mood-accent-live': accent }}>
                 <header className="zero-chapter-head">
-                  <span>{t('read')}</span>
-                  <h2>{t('readTitle')}</h2>
-                  <p>{t('readCaption')}</p>
+                  <span>{sceneCopy.cinema.eyebrow}</span>
+                  <h2>{sceneCopy.cinema.title}</h2>
+                  <p>{sceneCopy.cinema.caption}</p>
                 </header>
 
-                <div className="reading-runway">
-                  <button
-                    type="button"
-                    onClick={() => activeBook && setBookDetail(activeBook)}
-                    className="reading-cover-focus"
-                  >
-                    {activeBookCover && <img src={activeBookCover} alt={activeBook?.title || ''} />}
-                  </button>
-
-                  <div className="reading-copy">
-                    <span>{prefs.language === 'tr' ? 'Kapak açılıyor' : 'Cover opens'}</span>
-                    <h3>{activeBook?.title}</h3>
-                    <p>{activeBook?.aiExplanation || activeBook?.overview || t('readCaption')}</p>
-                    <div>
-                      <button type="button" onClick={() => activeBook && setBookDetail(activeBook)}>
-                        {prefs.language === 'tr' ? 'İnfo' : 'Info'}
-                      </button>
-                      <button type="button" onClick={() => activeBook && handleToggleFavoriteAndHide(activeBook, 'book')}>
-                        {isFavorite(getItemId(activeBook)) ? t('inFavorites') : t('addFavorite')}
-                      </button>
-                      <button type="button" onClick={() => activeBook && dismissBook(activeBook)}>
-                        {prefs.language === 'tr' ? 'Okudum' : 'Read'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="book-cover-stream">
-                    {shownBooks.slice(0, 9).map((book, index) => {
-                      const cover = book.poster ||
-                        (book.title ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(book.title)}-L.jpg?default=false` : '');
-                      const active = getItemId(book) === getItemId(activeBook);
+                {/* 3-col stage: tracklist | poster+ticket | info */}
+                <div className="cinema-stage">
+                  {/* Left: numbered tracklist */}
+                  <div className="cinema-tracklist">
+                    {shownMovies.slice(0, 8).map((movie, index) => {
+                      const active = getItemId(movie) === getItemId(activeMovie);
                       return (
                         <button
-                          key={book._id || book.title}
+                          key={movie._id || movie.title}
                           type="button"
-                          onClick={() => setActiveBookId(getItemId(book))}
-                          className={active ? 'is-active' : ''}
-                          style={{ '--i': index }}
+                          className={`cinema-track ${active ? 'is-active' : ''}`}
+                          onClick={() => setActiveMovieId(getItemId(movie))}
                         >
-                          {cover && <img src={cover} alt={book.title} />}
-                          <span>{book.title}</span>
+                          <span className="cinema-track-num">{String(index + 1).padStart(2, '0')}</span>
+                          <span className="cinema-track-name">{movie.title}</span>
+                          {movie.genre && <span className="cinema-track-tag">{movie.genre}</span>}
                         </button>
                       );
                     })}
                   </div>
+
+                  {/* Center: dramatic poster + golden ticket */}
+                  <div className="cinema-podium">
+                    <div className="cinema-podium-glow" aria-hidden />
+                    <div className="cinema-card-carousel" aria-hidden>
+                      {cinemaCarouselMovies.map(({ movie, offset }, index) => {
+                        return (
+                          <span
+                            key={`${movie.title}-${index}`}
+                            style={{ '--offset': offset, '--distance': Math.abs(offset), '--z': 5 - Math.abs(offset) }}
+                          >
+                            {movie.poster && <img src={movie.poster} alt="" />}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      className="cinema-screen"
+                      onClick={() => activeMovie && setMovieDetail(activeMovie)}
+                    >
+                      {activeMovie?.poster
+                        ? <img src={activeMovie.poster} alt={activeMovie.title || ''} />
+                        : <div className="cinema-screen-empty" />}
+                      <span className="cinema-screen-enter">
+                        {prefs.language === 'tr' ? 'Sahneye gir' : 'Enter scene'}
+                      </span>
+                    </button>
+
+                    <div className="cinema-ticket">
+                      <div className="cinema-ticket-stub">
+                        <span>admit</span>
+                        <strong>one</strong>
+                      </div>
+                      <div className="cinema-ticket-body">
+                        <span>now showing</span>
+                        <strong>{activeMovie?.title}</strong>
+                        {activeMovie?.genre && <em>{activeMovie.genre}</em>}
+                      </div>
+                      <div className="cinema-ticket-stub cinema-ticket-stub-r">
+                        <span>no.</span>
+                        <strong>{String(activeMovieIndex + 1).padStart(2, '0')}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: info + actions */}
+                  <div className="cinema-info">
+                    <span className="cinema-info-eyebrow">
+                      spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}
+                    </span>
+                    <h3 className="cinema-info-title">{activeMovie?.title}</h3>
+                    {activeMovie?.genre && <p className="cinema-info-genre">{activeMovie.genre}</p>}
+                    <p className="cinema-info-desc">{activeMovie?.aiExplanation || activeMovie?.overview}</p>
+                    <div className="cinema-info-actions">
+                      <button type="button" className="action-detail" onClick={() => activeMovie && setMovieDetail(activeMovie)}>
+                        {prefs.language === 'tr' ? 'Perdeye yansıt' : 'Project it'}
+                      </button>
+                      <button type="button" className="action-favorite" onClick={() => activeMovie && handleToggleFavoriteAndHide(activeMovie, 'movie')}>
+                        {isFavorite(getItemId(activeMovie)) ? t('inFavorites') : t('addFavorite')}
+                      </button>
+                      <button type="button" className="action-bookmark" onClick={() => activeMovie && dismissMovie(activeMovie)}>
+                        {prefs.language === 'tr' ? 'İzledim' : 'Watched'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {projectedMovie && (
+                  <div className="cinema-projection" aria-live="polite">
+                    <div className="cinema-projection-beam" aria-hidden />
+                    <div className="cinema-projection-screen">
+                      <button
+                        type="button"
+                        className="cinema-projection-close"
+                        onClick={() => setMovieDetail(null)}
+                        aria-label={prefs.language === 'tr' ? 'Projeksiyonu kapat' : 'Close projection'}
+                      />
+                      <div className="cinema-projection-poster">
+                        {projectedMovie.poster && <img src={projectedMovie.poster} alt="" />}
+                      </div>
+                      <div className="cinema-projection-copy">
+                        <span className="cinema-projection-kicker">
+                          {prefs.language === 'tr' ? 'perdeye yansıyan seçim' : 'projected pick'}
+                        </span>
+                        <h3>{projectedMovie.title}</h3>
+                        <p>{projectedMovie.aiExplanation || projectedMovie.overview || sceneCopy.cinema.caption}</p>
+                        <div className="cinema-projection-stats">
+                          {projectedMovie.rating && <span>IMDb {projectedMovie.rating}</span>}
+                          {projectedMovie.runtime && <span>{projectedMovie.runtime} min</span>}
+                          {projectedMovie.releaseYear && <span>{projectedMovie.releaseYear}</span>}
+                          {projectedMovie.genre && <span>{projectedMovie.genre}</span>}
+                        </div>
+                      </div>
+                      <div className="cinema-projection-details">
+                        {projectedDirectors.length > 0 && (
+                          <div>
+                            <span>{prefs.language === 'tr' ? 'Yönetmen' : 'Director'}</span>
+                            <strong>{projectedDirectors.join(', ')}</strong>
+                          </div>
+                        )}
+                        {projectedCast.length > 0 && (
+                          <div>
+                            <span>{prefs.language === 'tr' ? 'Oyuncular' : 'Cast'}</span>
+                            <strong>{projectedCast.slice(0, 4).join(', ')}</strong>
+                          </div>
+                        )}
+                        {projectedProviders.length > 0 && (
+                          <div>
+                            <span>{prefs.language === 'tr' ? 'Nerede var?' : 'Where to watch'}</span>
+                            {projectedProviderLogos.length > 0 ? (
+                              <div className="cinema-provider-logos">
+                                {projectedProviderLogos.slice(0, 5).map((provider) => (
+                                  <a
+                                    key={provider.name}
+                                    href={provider.link || getMovieSearch(projectedMovie, 'imdb')}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={`${provider.name}${provider.type ? ` (${provider.type})` : ''}`}
+                                    aria-label={provider.name}
+                                  >
+                                    {provider.logo ? <img src={provider.logo} alt="" /> : <em>{provider.name}</em>}
+                                    {provider.type && <span>{provider.type}</span>}
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <strong>{projectedProviders.slice(0, 4).join(', ')}</strong>
+                            )}
+                          </div>
+                        )}
+                        {(projectionLoading || !hasProjectionMetadata) && (
+                          <div className="cinema-projection-note">
+                            {projectionLoading
+                              ? (prefs.language === 'tr' ? 'TMDB detayları perdeye yükleniyor...' : 'Loading TMDB details onto the screen...')
+                              : prefs.language === 'tr'
+                              ? 'TMDB bu başlık için oyuncu, yönetmen veya platform bilgisini döndürmedi.'
+                              : 'TMDB did not return cast, director, or provider details for this title.'}
+                          </div>
+                        )}
+                        <div className="cinema-projection-links">
+                          <a href={getMovieSearch(projectedMovie, 'imdb')} target="_blank" rel="noreferrer">IMDb</a>
+                          <a href={getMovieSearch(projectedMovie, 'letterboxd')} target="_blank" rel="noreferrer">Letterboxd</a>
+                          <button type="button" className="action-favorite" onClick={() => handleToggleFavoriteAndHide(projectedMovie, 'movie')}>
+                            {isFavorite(getItemId(projectedMovie)) ? t('inFavorites') : t('addFavorite')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Film strip bottom */}
+                <div className="cinema-film-strip" aria-hidden>
+                  <div className="cinema-sprockets" />
+                  <div className="cinema-film-ticker cinema-film-ticker-rev">
+                    {[...shownMovies, ...shownMovies, ...shownMovies].map((m, i) => (
+                      <span key={i}>{m.title}</span>
+                    ))}
+                  </div>
+                  <div className="cinema-sprockets" />
+                </div>
+              </section>
+            )}
+
+            {selectedScene === 'books' && recPrefs.showBooks && shownBooks.length > 0 && (
+              <section className="zero-chapter zero-books" style={{ '--mood-accent-live': accent }}>
+                {/* Reading room atmosphere */}
+                <div className="library-atmosphere" aria-hidden>
+                  <div className="library-lamp-beam" />
+                  <div className="library-dust">
+                    {Array.from({ length: 14 }).map((_, index) => (
+                      <span key={index} style={{ '--i': index }} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="library-shelf" aria-hidden />
+
+                <header className="zero-chapter-head">
+                  <span>{sceneCopy.books.eyebrow}</span>
+                  <h2>{sceneCopy.books.title}</h2>
+                  <p>{sceneCopy.books.caption}</p>
+                </header>
+
+                <div className="library-stage">
+                  {/* Center: open book */}
+                  <div className="library-podium">
+                    <div className="library-lamp-glow" aria-hidden />
+                    <div className="storybook-spread">
+                      <div className="storybook-page storybook-page-main">
+                        <span>{`chapter ${String(activeBookIndex + 1).padStart(2, '0')}`}</span>
+                        <strong>{activeBook?.title}</strong>
+                        <p>{activeBook?.aiExplanation || activeBook?.overview || t('readCaption')}</p>
+                        <div className="storybook-actions">
+                          <button type="button" className="action-favorite" onClick={() => activeBook && handleToggleFavoriteAndHide(activeBook, 'book')}>
+                            {isFavorite(getItemId(activeBook)) ? t('inFavorites') : t('saveToLibrary')}
+                          </button>
+                          <a className="action-detail" href={getGoodreadsSearch(activeBook)} target="_blank" rel="noreferrer">
+                            Goodreads
+                          </a>
+                        </div>
+                      </div>
+                      <div className="storybook-page storybook-page-cover">
+                        <span>{prefs.language === 'tr' ? 'kapak sayfası' : 'cover page'}</span>
+                        <button type="button" className="storybook-cover-button" onClick={() => activeBook && setBookDetail(activeBook)}>
+                          {activeBookCover
+                            ? <img src={activeBookCover} alt={activeBook?.title || ''} />
+                            : <div className="library-cover-empty" />}
+                        </button>
+                        <em>{activeBook?.overview || activeBook?.author || moodTitle}</em>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: shelf notes */}
+                  <div className="library-info">
+                    <span className="library-info-eyebrow">
+                      {`volume ${String(shownBooks.findIndex((b) => getItemId(b) === getItemId(activeBook)) + 1 || 1).padStart(2, '0')} / ${shownBooks.length}`}
+                    </span>
+                    <h3 className="library-info-title">{prefs.language === 'tr' ? 'Mood rafından seç' : 'Choose from the mood shelf'}</h3>
+                    <div className="library-cover-rail">
+                      {shownBooks.slice(0, 10).map((book, index) => {
+                        const cover = book.poster ||
+                          (book.title ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(book.title)}-L.jpg?default=false` : '');
+                        const active = getItemId(book) === getItemId(activeBook);
+                        return (
+                          <button
+                            key={book._id || book.title}
+                            type="button"
+                            className={active ? 'is-active' : ''}
+                            onClick={() => setActiveBookId(getItemId(book))}
+                            style={{ '--i': index }}
+                          >
+                            {cover && <img src={cover} alt={book.title} />}
+                            <span>{book.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="library-info-actions">
+                      <button type="button" className="action-bookmark" onClick={() => activeBook && dismissBook(activeBook)}>
+                        {prefs.language === 'tr' ? 'Okudum' : 'Read'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="library-shelf" aria-hidden />
               </section>
             )}
           </>
         )}
       </div>
 
-      {movieDetail && (
-        <FilmDetailModal
-          item={movieDetail}
-          onClose={() => setMovieDetail(null)}
-          isFavorite={isFavorite}
-          onToggleFavorite={toggle}
-        />
-      )}
       <BookDetailModal
         item={bookDetail}
         onClose={() => setBookDetail(null)}

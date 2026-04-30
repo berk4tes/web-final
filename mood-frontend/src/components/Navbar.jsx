@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { to: '/vibe', key: 'navVibe' },
   { to: '/dashboard', key: 'navDashboard' },
   { to: '/motivation', key: 'navMotivation' },
-  { to: '/profile', key: 'navProfile' },
+  { to: '/moodboard', label: 'Moodboard' },
 ];
 
 const Navbar = () => {
@@ -37,7 +37,7 @@ const Navbar = () => {
       <nav className="nav-shell mx-auto flex max-w-[82rem] items-center justify-between gap-3 px-3 py-3 sm:px-4">
         <Link to="/" className="nav-brand flex min-w-0 items-center gap-3 text-base font-semibold text-ink-700">
           <span
-            className="grid h-11 w-11 place-items-center rounded-[1.1rem] text-white shadow-glow transition-colors duration-500"
+            className="nav-brand-mark grid place-items-center text-white transition-colors duration-500"
             style={{
               background: theme
                 ? `linear-gradient(145deg, ${theme.accent}, ${theme.ink})`
@@ -46,10 +46,10 @@ const Navbar = () => {
           >
             <LogoMark />
           </span>
-          <span className="min-w-0">
-            <span className="block truncate font-display text-xl tracking-tight">MoodFlix</span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-ink-400">
-              {vibeData?.mood?.title || 'Mood Companion'}
+          <span className="nav-brand-copy min-w-0">
+            <span className="nav-brand-word block truncate font-display text-xl tracking-tight">Luma</span>
+            <span className="nav-brand-mood block text-[10px] font-semibold uppercase tracking-[0.22em] text-ink-400">
+              {vibeData?.mood?.title || 'Melancholic reflections'}
             </span>
           </span>
         </Link>
@@ -64,7 +64,7 @@ const Navbar = () => {
                   `nav-link ${isActive ? 'is-active' : ''}`
                 }
               >
-                {t(item.key)}
+                {item.label || t(item.key)}
               </NavLink>
             ))}
           </div>
@@ -73,20 +73,13 @@ const Navbar = () => {
         <div className="hidden items-center gap-2 md:flex">
           {isAuthenticated ? (
             <>
-              {vibeData && (
-                <button
-                  onClick={() => { resetVibe(); navigate('/vibe'); }}
-                  className="nav-utility"
-                >
-                  {t('resetVibe')}
-                </button>
-              )}
               <Link
                 to="/profile"
                 className="nav-profile-chip"
+                aria-label={t('navProfile')}
+                title={t('navProfile')}
               >
                 <UserAvatar value={user?.avatar} name={user?.username} className="h-7 w-7 text-xs" />
-                <span className="max-w-[120px] truncate text-sm">{user?.username}</span>
               </Link>
               <button onClick={handleLogout} className="nav-utility">{t('signOut')}</button>
             </>
@@ -120,17 +113,9 @@ const Navbar = () => {
                   onClick={() => setOpen(false)}
                   className={({ isActive }) => `nav-mobile-link ${isActive ? 'is-active' : ''}`}
                 >
-                  {t(item.key)}
+                  {item.label || t(item.key)}
                 </NavLink>
               ))}
-              {vibeData && (
-                <button
-                  onClick={() => { resetVibe(); setOpen(false); navigate('/vibe'); }}
-                  className="nav-mobile-link text-left text-rose-400"
-                >
-                  {t('resetVibe')}
-                </button>
-              )}
               <button
                 onClick={handleLogout}
                 className="nav-mobile-link text-left"
