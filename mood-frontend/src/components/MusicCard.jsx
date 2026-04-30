@@ -1,5 +1,7 @@
+import { useUserPreferences } from '../context/UserPreferencesContext';
+
 const MUSIC_PLACEHOLDER =
-  'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23e9e3ff%22/><stop offset=%221%22 stop-color=%22%23fad6c6%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 fill=%22url(%23g)%22/><circle cx=%2250%22 cy=%2250%22 r=%2218%22 fill=%22%23ffffff%22 fill-opacity=%220.5%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%231f1d18%22/></svg>';
+  'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22><stop offset=%220%22 stop-color=%22%23e9e3ff%22/><stop offset=%221%22 stop-color=%22%23fad6c6%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 fill=%22url(%23g)%22/><circle cx=%2250%22 cy=%2250%22 r=%2218%22 fill=%22%23ffffff%22 fill-opacity=%220.5%22/><circle cx=%2250%22 cy=%2250%22 r=%226%22 fill=%22%231f1d18%22/></svg>';
 
 const HeartIcon = ({ filled }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -13,7 +15,7 @@ const SpotifyIcon = () => (
   </svg>
 );
 
-const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
+const MusicCard = ({ item, index = 0, expanded = false, isFavorite, onToggleFavorite, onSelect }) => {
   const { t } = useUserPreferences();
   const favKey = item.externalId || item.title;
   const favored = isFavorite?.(favKey);
@@ -36,79 +38,117 @@ const MusicCard = ({ item, isFavorite, onToggleFavorite }) => {
       thumbnail: item.poster,
     });
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect?.(item);
+    }
+  };
+
   return (
-    <article className="group flex items-center gap-4 rounded-2xl border border-ink-100 bg-white p-3 transition hover:border-accent/30 hover:bg-ink-50/40 hover:shadow-soft">
-      <a
-        href={spotifyTrackUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl"
-        title="Open track on Spotify"
+    <article
+      onClick={() => onSelect?.(item)}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-pressed={expanded}
+      className={`music-card group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-[1.35rem] border p-3 text-left outline-none transition-all duration-500 focus:ring-2 focus:ring-white/50 ${
+        expanded
+          ? 'min-h-[156px] border-[#f45f43]/70 bg-[#f45f43] text-ink-800 shadow-[0_20px_60px_rgba(244,95,67,0.28)]'
+          : 'border-white/10 bg-white/8 text-white hover:border-white/22 hover:bg-white/12'
+      }`}
+      style={{ transitionDelay: `${Math.min(index, 8) * 26}ms` }}
+    >
+      <div
+        className={`record-sleeve relative flex-shrink-0 overflow-visible rounded-[1rem] transition-all duration-500 ${
+          expanded ? 'h-28 w-28' : 'h-14 w-14'
+        }`}
       >
         <img
           src={item.poster || MUSIC_PLACEHOLDER}
           alt={item.title}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          className="relative z-10 h-full w-full rounded-[1rem] object-cover shadow-[0_12px_30px_rgba(0,0,0,0.24)] transition duration-500 group-hover:scale-105"
           loading="lazy"
           onError={(e) => { e.currentTarget.src = MUSIC_PLACEHOLDER; }}
         />
-        <span className="absolute inset-0 grid place-items-center bg-ink-800/50 text-[10px] font-semibold uppercase tracking-wider text-white opacity-0 transition group-hover:opacity-100">
-          Play
-        </span>
-      </a>
+        <span
+          className={`record-disc pointer-events-none absolute top-1/2 aspect-square -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,#f8f7f4_0_9%,#15140f_10%_44%,#2c2922_45%_52%,#15140f_53%_100%)] shadow-[0_10px_34px_rgba(0,0,0,0.38)] transition-all duration-500 ${
+            expanded ? '-right-10 w-24 rotate-45 opacity-100' : '-right-4 w-12 opacity-0 group-hover:opacity-70'
+          }`}
+        />
+      </div>
 
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold text-ink-700">{item.title}</h3>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-semibold tabular-nums ${expanded ? 'text-ink-800/60' : 'text-white/30'}`}>
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <h3 className={`truncate font-semibold ${expanded ? 'text-xl leading-tight text-ink-800' : 'text-sm text-white'}`}>
+            {item.title}
+          </h3>
+        </div>
         {artist && (
           <a
             href={spotifyArtistUrl}
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="mt-0.5 block truncate text-xs text-ink-400 transition hover:text-[#1DB954] hover:underline"
+            className={`mt-1 block truncate text-xs transition hover:underline ${expanded ? 'text-ink-800/70 hover:text-ink-800' : 'text-white/55 hover:text-[#1DB954]'}`}
             title="Open artist on Spotify"
           >
             {artist}
           </a>
         )}
         {item.aiExplanation && (
-          <p className="mt-1 line-clamp-1 text-xs italic text-ink-400">{item.aiExplanation}</p>
+          <p className={`mt-2 text-xs leading-relaxed ${expanded ? 'line-clamp-3 text-ink-800/78' : 'line-clamp-1 text-white/42'}`}>
+            {item.aiExplanation}
+          </p>
+        )}
+        {expanded && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a
+              href={spotifyTrackUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black"
+              title="Open on Spotify"
+            >
+              <SpotifyIcon />
+              <span>{t('spotify')}</span>
+            </a>
+            <a
+              href={appleUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink-800/20 bg-white/35 px-3 py-2 text-xs font-semibold text-ink-800 transition hover:bg-white/55"
+              title="Open on Apple Music"
+            >
+              <span>{t('apple')}</span>
+            </a>
+          </div>
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={handleFav}
-          aria-label={favored ? 'Remove from favorites' : 'Add to favorites'}
-          className={`grid h-9 w-9 place-items-center rounded-full transition ${
-            favored ? 'bg-rose-500 text-white' : 'bg-ink-100 text-ink-500 hover:bg-rose-100 hover:text-rose-500'
-          }`}
-        >
-          <HeartIcon filled={favored} />
-        </button>
-        <a
-          href={spotifyTrackUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="hidden items-center gap-1.5 rounded-full bg-[#1DB954] px-3 py-2 text-xs font-medium text-white transition hover:brightness-110 sm:inline-flex"
-          title="Open on Spotify"
-        >
-          <SpotifyIcon />
-          <span>{t('spotify')}</span>
-        </a>
-        <a
-          href={appleUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="hidden items-center gap-1.5 rounded-full bg-ink-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-ink-600 sm:inline-flex"
-          title="Open on Apple Music"
-        >
-          <span>{t('apple')}</span>
-        </a>
-      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFav();
+        }}
+        aria-label={favored ? 'Remove from favorites' : 'Add to favorites'}
+        className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-full transition ${
+          favored
+            ? 'bg-rose-500 text-white'
+            : expanded
+              ? 'bg-ink-800/10 text-ink-800 hover:bg-rose-500 hover:text-white'
+              : 'bg-white/10 text-white/60 hover:bg-rose-500 hover:text-white'
+        }`}
+      >
+        <HeartIcon filled={favored} />
+      </button>
     </article>
   );
 };
 
 export default MusicCard;
-import { useUserPreferences } from '../context/UserPreferencesContext';

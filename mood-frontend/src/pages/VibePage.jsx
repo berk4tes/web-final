@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import BookCard from '../components/BookCard';
 import BookDetailModal from '../components/BookDetailModal';
+import CircularGallery from '../components/CircularGallery';
 import LoadingVibeState from '../components/LoadingVibeState';
-import MoodSummary from '../components/MoodSummary';
-import MoodboardGrid from '../components/MoodboardGrid';
-import MovieCard from '../components/MovieCard';
-import MovieDetailModal from '../components/MovieDetailModal';
-import MusicCard from '../components/MusicCard';
-import SectionHeader from '../components/SectionHeader';
+import FilmDetailModal from '../components/FilmDetailModal';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import useFavorites from '../hooks/useFavorites';
@@ -20,30 +15,12 @@ const SAVED_VIBES_KEY = 'moodflix.savedVibes';
 const WATCHED_KEY = 'moodflix.watched';
 const READ_KEY = 'moodflix.readBooks';
 const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
-const VISIBLE_MEDIA_COUNT = 5;
 
 const REFINE_ACTIONS = [
   { id: 'lighter', labelKey: 'refineLighter', hint: 'similar to this, but lighter and softer' },
   { id: 'darker', labelKey: 'refineDarker', hint: 'similar to this, but darker and moodier' },
   { id: 'niche', labelKey: 'refineNiche', hint: 'more niche and less obvious' },
 ];
-
-const ChevronIcon = ({ open }) => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={`transition-transform ${open ? 'rotate-180' : ''}`}
-    aria-hidden="true"
-  >
-    <path d="M6 9l6 6 6-6" />
-  </svg>
-);
 
 const VibePage = () => {
   const location = useLocation();
@@ -57,14 +34,17 @@ const VibePage = () => {
   const [loading, setLoading] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   const [activeRefines, setActiveRefines] = useState([]);
-  const [openSections, setOpenSections] = useState({ music: true, movies: true, books: true });
 
   // UI state
   const [movieDetail, setMovieDetail] = useState(null);
   const [bookDetail, setBookDetail] = useState(null);
   const [savedVibes, setSavedVibes] = useState([]);
+  const [activeMovieId, setActiveMovieId] = useState(null);
+  const [activeMusicId, setActiveMusicId] = useState(null);
+  const [activeBookId, setActiveBookId] = useState(null);
+  const [scrollY, setScrollY] = useState(0);
 
-  // Per-section lists (allow card dismissal without mutating context)
+  // Per-section lists allow dismissal without mutating context.
   const [movieList, setMovieList] = useState([]);
   const [bookList, setBookList] = useState([]);
   const [musicList, setMusicList] = useState([]);
@@ -75,7 +55,7 @@ const VibePage = () => {
   const generateRef = useRef(null);
   const recPrefs = { ...REC_PREFS_DEFAULTS, ...(prefs.recPrefs || {}) };
 
-  const getItemId = (item) => item.externalId || item._id || item.title;
+  const getItemId = (item) => item?.externalId || item?._id || item?.title;
 
   const getStoredIds = (key) => {
     try {
@@ -165,6 +145,64 @@ const VibePage = () => {
   const shownMusic = musicList;
   const shownMovies = movieList;
   const shownBooks = bookList;
+  const activeMovie = shownMovies.find((item) => getItemId(item) === activeMovieId) || shownMovies[0];
+  const activeMovieIndex = Math.max(0, shownMovies.findIndex((item) => getItemId(item) === getItemId(activeMovie)));
+  const activeMusic = shownMusic.find((item) => getItemId(item) === activeMusicId) || shownMusic[0];
+  const activeBook = shownBooks.find((item) => getItemId(item) === activeBookId) || shownBooks[0];
+  const activeBookCover = activeBook?.poster ||
+    (activeBook?.title
+      ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(activeBook.title)}-L.jpg?default=false`
+      : '');
+  const heroFeature = activeMovie || activeBook || shownMusic[0];
+  const heroVisual = heroFeature?.poster || activeBookCover || shownMusic[0]?.poster;
+
+  useEffect(() => {
+    if (!shownMovies.length) {
+      setActiveMovieId(null);
+      return;
+    }
+    if (!shownMovies.some((item) => getItemId(item) === activeMovieId)) {
+      setActiveMovieId(getItemId(shownMovies[0]));
+    }
+  }, [shownMovies, activeMovieId]);
+
+  useEffect(() => {
+    if (!shownMusic.length) {
+      setActiveMusicId(null);
+      return;
+    }
+    if (!shownMusic.some((item) => getItemId(item) === activeMusicId)) {
+      setActiveMusicId(getItemId(shownMusic[0]));
+    }
+  }, [shownMusic, activeMusicId]);
+
+  useEffect(() => {
+    if (!shownBooks.length) {
+      setActiveBookId(null);
+      return;
+    }
+    if (!shownBooks.some((item) => getItemId(item) === activeBookId)) {
+      setActiveBookId(getItemId(shownBooks[0]));
+    }
+  }, [shownBooks, activeBookId]);
+
+  useEffect(() => {
+    let frame = null;
+    const handleScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        setScrollY(window.scrollY || 0);
+        frame = null;
+      });
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   const handleGenerate = async (overridePrompt, overrideIntensity) => {
     const value = (overridePrompt ?? prompt).trim();
@@ -317,148 +355,126 @@ const VibePage = () => {
     handleGenerate(base);
   };
 
-  const toggleSection = (section) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
-
   // Dynamic prompt suggestions based on the current mood colorKey
   const promptSuggestions = colorKey
     ? getPromptSuggestions(colorKey)
     : VIBE_PROMPT_EXAMPLES.slice(0, 4);
-  const visibleSections = vibeData?.sections
-    ? {
-        music: recPrefs.showMusic ? shownMusic : [],
-        movies: (recPrefs.showMovies || recPrefs.showSeries) ? shownMovies : [],
-        books: recPrefs.showBooks ? shownBooks : [],
-      }
-    : null;
+  const scrollFloat = Math.min(scrollY * 0.08, 72);
+  const heroTilt = Math.min(scrollY * 0.015, 7);
+  const accent = theme?.accent || '#7c5cff';
+  const getMusicArtist = (item) => item?.artist || item?.overview || '';
+  const getMusicSearch = (item, service) => {
+    const query = encodeURIComponent(`${item?.title || ''} ${getMusicArtist(item)}`.trim());
+    return service === 'apple'
+      ? `https://music.apple.com/search?term=${query}`
+      : `https://open.spotify.com/search/${query}`;
+  };
+  const movieGalleryItems = shownMovies.slice(0, 10).filter((item) => item.poster).map((item) => ({
+    image: item.poster,
+    text: item.title,
+  }));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
-      {/* Hero input composer */}
-      <section className="relative min-h-[calc(100vh-96px)] overflow-hidden py-8 sm:py-12 lg:py-16">
+    <div className="vibe-zero-shell">
+      <section className="vibe-zero-hero" style={{ '--mood-accent-live': accent }}>
+        <div className="zero-ambient zero-ambient-a" aria-hidden />
+        <div className="zero-ambient zero-ambient-b" aria-hidden />
         <div
-          className="pointer-events-none absolute left-1/2 top-8 h-80 w-80 -translate-x-1/2 rounded-full blur-3xl transition-colors duration-700 sm:h-[28rem] sm:w-[28rem]"
-          style={{ backgroundColor: theme ? `${theme.accent}2f` : 'rgba(124,92,255,0.16)' }}
+          className="zero-orbit zero-orbit-a"
+          style={{ transform: `translate3d(0, ${scrollFloat * -0.45}px, 0) rotate(${heroTilt}deg)` }}
+          aria-hidden
+        />
+        <div
+          className="zero-orbit zero-orbit-b"
+          style={{ transform: `translate3d(0, ${scrollFloat * 0.5}px, 0) rotate(${heroTilt * -1.4}deg)` }}
           aria-hidden
         />
 
-        <div className="relative mx-auto flex min-h-[72vh] max-w-4xl flex-col items-center justify-center text-center">
-          <span className="section-eyebrow">{t('moodFirst')}</span>
-          <h1 className="mt-5 max-w-4xl font-display text-5xl font-semibold leading-[0.98] tracking-tight text-ink-700 text-balance sm:text-7xl">
-            {t('heroTitle')}
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-500 text-balance sm:text-lg">
-            {t('heroSubtitle')}
-          </p>
+        <div className="vibe-zero-hero-inner">
+          <div className="vibe-zero-copy">
+            <span className="zero-kicker">{t('moodFirst')}</span>
+            <h1 className="zero-title">{t('heroTitle')}</h1>
+            <p className="zero-subtitle">{t('heroSubtitle')}</p>
 
-          <div className="relative mood-console mt-10 w-full min-w-0 text-left">
-            <div className="pointer-events-none absolute -inset-5 rounded-[2.2rem] border border-white/35 opacity-70" />
-            <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full blur-2xl" style={{ backgroundColor: theme?.accent || '#7c5cff' }} />
             <form
               onSubmit={(e) => { e.preventDefault(); handleGenerate(); }}
-              className="relative rounded-[2rem] border border-white/50 bg-white/70 p-3 shadow-soft backdrop-blur-xl sm:p-4"
+              className="zero-command"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <input
-                  value={prompt}
-                  onChange={(e) => handlePromptChange(e.target.value)}
-                  placeholder="Feels like Gilmore Girls in autumn..."
-                  maxLength={500}
-                  className="input mood-hero-input min-h-14 flex-1 text-base shadow-none"
-                  autoFocus
-                />
-                <button type="submit" disabled={loading} className="btn-accent min-h-12 shrink-0 px-7 text-base">
-                  {loading ? t('generating') : t('generate')}
-                </button>
-              </div>
+              <input
+                value={prompt}
+                onChange={(e) => handlePromptChange(e.target.value)}
+                placeholder="Feels like late-night cinema, neon rain, soft heartbreak..."
+                maxLength={500}
+                className="zero-command-input"
+                autoFocus
+              />
+              <button type="submit" disabled={loading} className="zero-command-button">
+                {loading ? t('generating') : t('generate')}
+              </button>
             </form>
 
-            {/* Emotional intensity slider */}
-            <div className="relative mt-4 rounded-[1.6rem] border border-white/45 bg-white/40 p-4 backdrop-blur">
-              <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wider text-ink-400">
-                      {t('intensity')}
-                    </span>
-                    <span
-                      className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-semibold tabular-nums"
-                      style={{ color: theme ? theme.accent : '#7c5cff' }}
-                    >
-                      {intensity}/10
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2" style={{ background: `linear-gradient(90deg, transparent, ${theme?.accent || '#7c5cff'}, transparent)` }} />
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={intensity}
-                      onChange={(e) => handleIntensityChange(Number(e.target.value))}
-                      className="relative h-2 w-full cursor-pointer rounded-full accent-accent"
-                      style={theme ? { accentColor: theme.accent } : {}}
-                    />
-                  </div>
+            <div className="zero-control-flow">
+              <div className="zero-intensity">
+                <div className="zero-intensity-head">
+                  <span>{t('intensity')}</span>
+                  <strong>{intensity}/10</strong>
                 </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={intensity}
+                  onChange={(e) => handleIntensityChange(Number(e.target.value))}
+                  className="zero-range"
+                  style={{ accentColor: accent }}
+                />
+              </div>
 
-                {/* Prompt suggestions - dynamic based on current mood */}
-                <div className="min-w-0">
-                  <span className="text-xs font-medium uppercase tracking-wider text-ink-400">{t('try')}</span>
-                  <div className="mt-2 flex gap-2 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible">
-                    {promptSuggestions.map((ex) => (
-                      <button
-                        key={ex}
-                        onClick={() => handleGenerate(ex)}
-                        disabled={loading}
-                        className="shrink-0 rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-ink-600 backdrop-blur transition hover:border-accent hover:text-accent-ink disabled:opacity-50 sm:shrink"
-                        style={{ '--tw-ring-color': theme?.accent }}
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="zero-prompts" aria-label={t('try')}>
+                {promptSuggestions.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    onClick={() => handleGenerate(ex)}
+                    disabled={loading}
+                    className="zero-prompt"
+                  >
+                    {ex}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="zero-refine">
               <button
                 type="button"
                 onClick={() => setRefineOpen((value) => !value)}
-                className="flex w-full items-center justify-between gap-4 rounded-2xl border border-ink-100 bg-white/60 px-4 py-3 text-left text-sm font-semibold text-ink-700 backdrop-blur transition hover:border-accent/40"
+                className="zero-refine-toggle"
               >
                 <span>{t('instantFilter')}</span>
-                <span className="shrink-0 text-xs font-medium text-ink-400">
-                  {activeRefines.length ? `${activeRefines.length} ${t('filterOn')}` : t('filterOff')}
-                </span>
+                <span>{activeRefines.length ? `${activeRefines.length} ${t('filterOn')}` : t('filterOff')}</span>
               </button>
 
               {refineOpen && (
-                <div className="mt-3 rounded-2xl border border-ink-100 bg-white/70 p-3">
-                  <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-                    {REFINE_ACTIONS.map((action) => {
-                      const active = activeRefines.includes(action.id);
-                      return (
-                        <button
-                          key={action.id}
-                          type="button"
-                          onClick={() => toggleRefine(action.id)}
-                          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:shrink ${
-                            active ? 'border-accent bg-accent/10 text-accent-ink' : 'border-ink-200 bg-white text-ink-500 hover:border-accent'
-                          }`}
-                        >
-                          {t(action.labelKey)}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="zero-refine-panel">
+                  {REFINE_ACTIONS.map((action) => {
+                    const active = activeRefines.includes(action.id);
+                    return (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => toggleRefine(action.id)}
+                        className={active ? 'is-active' : ''}
+                      >
+                        {t(action.labelKey)}
+                      </button>
+                    );
+                  })}
                   <button
                     type="button"
                     onClick={applyRefines}
                     disabled={!activeRefines.length || loading}
-                    className="btn-secondary mt-3 w-full disabled:cursor-not-allowed disabled:opacity-50"
+                    className="zero-refine-apply"
                   >
                     {t('applyFilter')}
                   </button>
@@ -466,158 +482,214 @@ const VibePage = () => {
               )}
             </div>
           </div>
+
+          <div className="zero-stage" aria-label="Mood preview">
+            <div className="zero-stage-copy">
+              <span>{heroFeature?.contentType || vibeData?.mood?.label || 'mood signal'}</span>
+              <strong>{heroFeature?.title || vibeData?.mood?.title || 'MoodFlix'}</strong>
+              <p>{heroFeature?.aiExplanation || heroFeature?.overview || t('watchCaption')}</p>
+            </div>
+            <div className="zero-poster zero-poster-back">
+              {shownMovies[1]?.poster && <img src={shownMovies[1].poster} alt="" />}
+            </div>
+            <div className="zero-poster zero-poster-mid">
+              {shownBooks[0]?.poster && <img src={shownBooks[0].poster} alt="" />}
+            </div>
+            <div className="zero-poster zero-poster-front">
+              {heroVisual && <img src={heroVisual} alt={heroFeature?.title || ''} />}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Results area */}
-      <div id="vibe-results" className="mt-10 space-y-10 sm:mt-12">
+      <div id="vibe-results" className="vibe-zero-results">
         {loading && <LoadingVibeState message={t('loadingVibe')} />}
 
         {!loading && !vibeData && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 rounded-full bg-white/70 flex items-center justify-center shadow-soft">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7a7565" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4M12 16h.01" />
-              </svg>
-            </div>
-            <h2 className="mt-4 font-display text-2xl font-semibold text-ink-700">
-              {t('emptyTitle')}
-            </h2>
-            <p className="mt-2 max-w-md text-sm text-ink-400">
-              {t('emptyBody')}
-            </p>
-          </div>
+          <section className="zero-empty">
+            <span>01</span>
+            <h2>{t('emptyTitle')}</h2>
+            <p>{t('emptyBody')}</p>
+          </section>
         )}
 
         {vibeData && !loading && (
           <>
-            <MoodSummary
-              mood={vibeData.mood}
-              onSave={handleSaveVibe}
-              isSaved={isSaved}
-            />
+            <section className="zero-manifesto" style={{ '--mood-accent-live': accent }}>
+              <span className="zero-index">mood decoded</span>
+              <h2>{vibeData.mood?.title}</h2>
+              <p>{vibeData.mood?.description || vibeData.prompt}</p>
+              <div className="zero-manifesto-actions">
+                {(vibeData.mood?.tags || []).slice(0, 5).map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+                <button type="button" onClick={handleSaveVibe}>
+                  {isSaved ? t('vibeSaved') : t('saveVibe')}
+                </button>
+              </div>
+            </section>
 
             {recPrefs.showMusic && shownMusic.length > 0 && (
-              <section className="mood-playlist animate-slide-up overflow-hidden rounded-[2rem] border border-white/45 bg-ink-800 p-4 text-white shadow-soft sm:p-5">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{t('soundtrack')}</span>
-                    <h2 className="mt-2 font-display text-3xl font-semibold">{t('playlistTitle')}</h2>
-                    <p className="mt-1 max-w-xl text-sm text-white/55">{t('playlistCaption')}</p>
-                  </div>
-                  <button type="button" onClick={() => toggleSection('music')} className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10">
-                    <span className="sr-only">{openSections.music ? t('closePlaylist') : t('openPlaylist')}</span>
-                    <span aria-hidden="true">{shownMusic.length}</span>
-                    <ChevronIcon open={openSections.music} />
-                  </button>
-                </div>
+              <section className="zero-chapter zero-music" style={{ '--mood-accent-live': accent }}>
+                <header className="zero-chapter-head">
+                  <span>soundtrack</span>
+                  <h2>{t('playlistTitle')}</h2>
+                  <p>{t('playlistCaption')}</p>
+                </header>
 
-                {openSections.music && (
-                  <div className="mt-5 grid gap-3 lg:grid-cols-[280px_1fr]">
-                    <div className="relative aspect-square overflow-hidden rounded-[1.5rem] bg-white/10">
-                      <img
-                        src={shownMusic[0]?.poster}
-                        alt=""
-                        className="h-full w-full object-cover opacity-70"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-ink-800 via-ink-800/20 to-transparent" />
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">{t('moodQueue')}</span>
-                        <p className="mt-2 font-display text-2xl font-semibold leading-tight">{vibeData.mood?.title}</p>
+                <div className="sound-runway">
+                  <div className="sound-focus">
+                    <div className="sound-disc">
+                      {activeMusic?.poster && <img src={activeMusic.poster} alt="" />}
+                    </div>
+                    <div className="sound-focus-text">
+                      <span>{String(shownMusic.findIndex((item) => getItemId(item) === getItemId(activeMusic)) + 1).padStart(2, '0')}</span>
+                      <h3>{activeMusic?.title}</h3>
+                      <p>{activeMusic?.aiExplanation || getMusicArtist(activeMusic) || t('playlistCaption')}</p>
+                      <div>
+                        <a href={getMusicSearch(activeMusic, 'spotify')} target="_blank" rel="noreferrer">Spotify</a>
+                        <a href={getMusicSearch(activeMusic, 'apple')} target="_blank" rel="noreferrer">Apple Music</a>
+                        <button type="button" onClick={() => activeMusic && handleToggleFavoriteAndHide(activeMusic, 'music')}>
+                          {isFavorite(getItemId(activeMusic)) ? t('inFavorites') : t('addFavorite')}
+                        </button>
                       </div>
                     </div>
-                    <div className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
-                      {shownMusic.slice(0, 10).map((m, index) => (
-                        <div key={m._id || m.title} className="grid grid-cols-[32px_1fr] items-center gap-2">
-                          <span className="text-right text-xs font-semibold text-white/35">{String(index + 1).padStart(2, '0')}</span>
-                          <MusicCard
-                            item={m}
-                            isFavorite={isFavorite}
-                            onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'music')}
-                          />
-                        </div>
-                      ))}
-                    </div>
                   </div>
-                )}
+
+                  <div className="sound-lines">
+                    {shownMusic.slice(0, 10).map((m, index) => {
+                      const active = getItemId(m) === getItemId(activeMusic);
+                      return (
+                        <button
+                          key={m._id || m.title}
+                          type="button"
+                          onClick={() => setActiveMusicId(getItemId(m))}
+                          className={`sound-line ${active ? 'is-active' : ''}`}
+                        >
+                          <span>{String(index + 1).padStart(2, '0')}</span>
+                          <strong>{m.title}</strong>
+                          <em>{getMusicArtist(m)}</em>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </section>
             )}
 
             {(recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
-              <section className="mood-cinema animate-slide-up overflow-hidden rounded-[2rem] border border-white/45 p-4 shadow-soft sm:p-5">
-                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{t('watch')}</span>
-                    <h2 className="mt-2 font-display text-3xl font-semibold text-white">{t('watchTitle')}</h2>
-                    <p className="mt-1 max-w-xl text-sm text-white/55">{t('watchCaption')}</p>
-                  </div>
-                  <button type="button" onClick={() => toggleSection('movies')} className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10">
-                    <span className="sr-only">{openSections.movies ? t('closeStrip') : t('openStrip')}</span>
-                    <ChevronIcon open={openSections.movies} />
-                  </button>
-                </div>
-                {openSections.movies && (
-                  <div className="cinema-strip -mx-4 overflow-x-auto px-4 pb-6">
-                    <div className="flex min-w-max gap-5">
-                      {shownMovies.slice(0, VISIBLE_MEDIA_COUNT).map((m, index) => (
-                        <div key={m._id || m.title} className="w-44 flex-shrink-0 sm:w-52">
-                          <MovieCard
-                            item={m}
-                            index={index}
-                            onClick={setMovieDetail}
-                            isFavorite={isFavorite}
-                            onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'movie')}
-                            onWatched={dismissMovie}
-                          />
-                        </div>
-                      ))}
+              <section className="zero-chapter zero-cinema" style={{ '--mood-accent-live': accent }}>
+                <header className="zero-chapter-head">
+                  <span>{t('watch')}</span>
+                  <h2>{t('watchTitle')}</h2>
+                  <p>{t('watchCaption')}</p>
+                </header>
+
+                <div className="cinema-runway">
+                  <div className="cinema-runway-copy">
+                    <span>{String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}</span>
+                    <h3>{activeMovie?.title}</h3>
+                    <p>{activeMovie?.aiExplanation || activeMovie?.overview}</p>
+                    <div>
+                      {activeMovie?.genre && <em>{activeMovie.genre}</em>}
+                      <button type="button" onClick={() => activeMovie && setMovieDetail(activeMovie)}>
+                        {prefs.language === 'tr' ? 'Detay' : 'Details'}
+                      </button>
+                      <button type="button" onClick={() => activeMovie && handleToggleFavoriteAndHide(activeMovie, 'movie')}>
+                        {isFavorite(getItemId(activeMovie)) ? t('inFavorites') : t('addFavorite')}
+                      </button>
+                      <button type="button" onClick={() => activeMovie && dismissMovie(activeMovie)}>
+                        {prefs.language === 'tr' ? 'İzledim' : 'Watched'}
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  <div className="cinema-gallery-field">
+                    <CircularGallery
+                      items={movieGalleryItems}
+                      bend={3.2}
+                      textColor="#fff6e8"
+                      borderRadius={0.045}
+                      scrollSpeed={1.9}
+                      scrollEase={0.035}
+                      onActiveIndexChange={(index) => {
+                        const movie = shownMovies.filter((item) => item.poster)[index];
+                        if (movie) setActiveMovieId(getItemId(movie));
+                      }}
+                    />
+                  </div>
+                </div>
               </section>
             )}
 
             {recPrefs.showBooks && shownBooks.length > 0 && (
-              <section className="animate-slide-up py-3">
-                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-                  <SectionHeader eyebrow={t('read')} title={t('readTitle')} caption={t('readCaption')} />
-                  <button type="button" onClick={() => toggleSection('books')} className="btn-pill">
-                    <span className="sr-only">{openSections.books ? t('closeShelf') : t('openShelf')}</span>
-                    <ChevronIcon open={openSections.books} />
+              <section className="zero-chapter zero-books" style={{ '--mood-accent-live': accent }}>
+                <header className="zero-chapter-head">
+                  <span>{t('read')}</span>
+                  <h2>{t('readTitle')}</h2>
+                  <p>{t('readCaption')}</p>
+                </header>
+
+                <div className="reading-runway">
+                  <button
+                    type="button"
+                    onClick={() => activeBook && setBookDetail(activeBook)}
+                    className="reading-cover-focus"
+                  >
+                    {activeBookCover && <img src={activeBookCover} alt={activeBook?.title || ''} />}
                   </button>
-                </div>
-                {openSections.books && (
-                  <div className="book-shelf overflow-hidden rounded-[2rem] border border-ink-100/70 px-4 pb-6 pt-6">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
-                      {shownBooks.slice(0, VISIBLE_MEDIA_COUNT).map((b, index) => (
-                        <BookCard
-                          key={b._id || b.title}
-                          item={b}
-                          index={index}
-                          onClick={setBookDetail}
-                          isFavorite={isFavorite}
-                          onToggleFavorite={(item) => handleToggleFavoriteAndHide(item, 'book')}
-                          onRead={dismissBook}
-                        />
-                      ))}
+
+                  <div className="reading-copy">
+                    <span>{prefs.language === 'tr' ? 'Kapak açılıyor' : 'Cover opens'}</span>
+                    <h3>{activeBook?.title}</h3>
+                    <p>{activeBook?.aiExplanation || activeBook?.overview || t('readCaption')}</p>
+                    <div>
+                      <button type="button" onClick={() => activeBook && setBookDetail(activeBook)}>
+                        {prefs.language === 'tr' ? 'İnfo' : 'Info'}
+                      </button>
+                      <button type="button" onClick={() => activeBook && handleToggleFavoriteAndHide(activeBook, 'book')}>
+                        {isFavorite(getItemId(activeBook)) ? t('inFavorites') : t('addFavorite')}
+                      </button>
+                      <button type="button" onClick={() => activeBook && dismissBook(activeBook)}>
+                        {prefs.language === 'tr' ? 'Okudum' : 'Read'}
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  <div className="book-cover-stream">
+                    {shownBooks.slice(0, 9).map((book, index) => {
+                      const cover = book.poster ||
+                        (book.title ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(book.title)}-L.jpg?default=false` : '');
+                      const active = getItemId(book) === getItemId(activeBook);
+                      return (
+                        <button
+                          key={book._id || book.title}
+                          type="button"
+                          onClick={() => setActiveBookId(getItemId(book))}
+                          className={active ? 'is-active' : ''}
+                          style={{ '--i': index }}
+                        >
+                          {cover && <img src={cover} alt={book.title} />}
+                          <span>{book.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </section>
             )}
-
-            <MoodboardGrid
-              sections={visibleSections}
-              mood={vibeData.mood}
-            />
-
           </>
         )}
       </div>
 
-      <MovieDetailModal item={movieDetail} onClose={() => setMovieDetail(null)} />
+      {movieDetail && (
+        <FilmDetailModal
+          item={movieDetail}
+          onClose={() => setMovieDetail(null)}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggle}
+        />
+      )}
       <BookDetailModal
         item={bookDetail}
         onClose={() => setBookDetail(null)}

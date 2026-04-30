@@ -9,12 +9,13 @@ const MoodSummary = ({ mood, onSave, isSaved }) => {
 
   return (
     <section className="relative animate-slide-up py-4 sm:py-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/45 px-5 py-6 shadow-soft backdrop-blur-xl sm:px-7 sm:py-7">
+      <div className="mood-summary-stage relative overflow-hidden px-5 py-6 sm:px-7 sm:py-7">
         <div
           className={`pointer-events-none absolute inset-0 opacity-75 bg-gradient-to-br ${color.gradient}`}
           aria-hidden
         />
-        <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full bg-white/50 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full bg-white/50 blur-3xl animate-pulse-soft" aria-hidden />
+        <div className="pointer-events-none absolute -left-10 bottom-6 h-28 w-28 rounded-full border border-white/40 bg-white/15 backdrop-blur-sm animate-float-swirl" aria-hidden />
         <div className="pointer-events-none absolute bottom-0 left-0 h-1 w-full" style={{ backgroundColor: color.accent }} />
 
         <div className="relative flex flex-wrap items-start justify-between gap-5">

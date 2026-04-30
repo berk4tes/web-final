@@ -17,7 +17,16 @@ const BookOpenIcon = () => (
   </svg>
 );
 
-const BookCard = ({ item, index = 0, onClick, isFavorite, onToggleFavorite, onRead }) => {
+const BookCard = ({
+  item,
+  index = 0,
+  featured = false,
+  onClick,
+  onOpenDetail,
+  isFavorite,
+  onToggleFavorite,
+  onRead,
+}) => {
   const { prefs } = useUserPreferences();
   const tr = prefs.language === 'tr';
   const favKey = item.externalId || item.title;
@@ -43,24 +52,51 @@ const BookCard = ({ item, index = 0, onClick, isFavorite, onToggleFavorite, onRe
     setTimeout(() => onRead?.(item), 280);
   };
 
+  const handleCardClick = () => {
+    if (featured) {
+      onOpenDetail?.(item);
+      return;
+    }
+    onClick?.(item);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCardClick();
+    }
+  };
+
   return (
-    <div className={exiting ? 'animate-slide-out-left pointer-events-none' : index === 4 ? 'animate-slide-in-right' : 'animate-scale-in'}>
-      <button
-        type="button"
-        onClick={() => onClick?.(item)}
-        className="group relative flex w-full flex-col text-left transition focus:outline-none"
+    <div
+      className={`book-card-shell flex-shrink-0 transition-all duration-500 ${
+        featured ? 'w-44 sm:w-52' : 'w-32 sm:w-36'
+      } ${exiting ? 'animate-slide-out-left pointer-events-none' : index === 4 ? 'animate-slide-in-right' : 'animate-scale-in'}`}
+    >
+      <article
+        onClick={handleCardClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-pressed={featured}
+        className="group/book relative flex w-full cursor-pointer flex-col text-left outline-none transition focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[#f4efe4]"
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-ink-100 shadow-soft transition group-hover:-translate-y-1 group-hover:shadow-glow">
+        <div className={`book-cover-card relative aspect-[2/3] w-full overflow-hidden rounded-[1rem] bg-ink-100 shadow-soft transition duration-500 group-hover/book:-translate-y-2 group-hover/book:shadow-glow ${featured ? 'is-featured' : ''}`}>
           <img
             src={item.poster || titleCover}
             alt={item.title}
             loading="lazy"
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-700 group-hover/book:scale-105"
             onError={(e) => {
               if (e.currentTarget.src !== COVER_PLACEHOLDER) e.currentTarget.src = COVER_PLACEHOLDER;
             }}
           />
           <div className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-black/15 to-transparent" />
+          <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-800/80 via-ink-800/20 to-transparent px-2.5 pb-2.5 pt-10 transition ${featured ? 'opacity-100' : 'opacity-0 group-hover/book:opacity-100'}`}>
+            <span className="inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-ink-700">
+              {tr ? 'Detay' : 'Info'}
+            </span>
+          </div>
 
           <button
             onClick={handleFav}
@@ -76,17 +112,17 @@ const BookCard = ({ item, index = 0, onClick, isFavorite, onToggleFavorite, onRe
         </div>
 
         <div className="mt-3 px-1">
-          <h3 className="line-clamp-2 text-sm font-semibold text-ink-700 group-hover:text-accent-ink">{item.title}</h3>
+          <h3 className={`line-clamp-2 font-semibold transition group-hover/book:text-accent-ink ${featured ? 'text-base text-ink-700' : 'text-sm text-ink-600'}`}>{item.title}</h3>
           {item.overview && (
             <p className="mt-0.5 line-clamp-1 text-xs text-ink-400">{item.overview}</p>
           )}
         </div>
-      </button>
+      </article>
 
       {onRead && (
         <button
           onClick={handleRead}
-          className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-white px-1 py-1.5 text-xs font-medium text-ink-500 transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent-ink"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-white/80 px-1 py-1.5 text-xs font-medium text-ink-500 transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent-ink"
         >
           <BookOpenIcon /> {tr ? 'Okudum' : 'Read'}
         </button>

@@ -74,9 +74,10 @@ const ThemedWrapper = ({ children }) => {
         className="mood-atmosphere pointer-events-none fixed inset-0 z-0"
         style={{
           background: theme
-            ? `radial-gradient(circle at 18% 18%, color-mix(in srgb, ${theme.accent} 34%, transparent), transparent 34%),
-               radial-gradient(circle at 82% 24%, color-mix(in srgb, ${theme.soft} 70%, transparent), transparent 36%),
-               linear-gradient(145deg, ${theme.soft} 0%, ${dark ? '#15140f' : '#f8f7f4'} 42%, color-mix(in srgb, ${theme.accent} 18%, ${theme.soft}) 100%)`
+            ? `radial-gradient(circle at 18% 18%, color-mix(in srgb, ${theme.accent} 46%, transparent), transparent 32%),
+               radial-gradient(circle at 82% 24%, color-mix(in srgb, ${theme.soft} 88%, transparent), transparent 34%),
+               radial-gradient(circle at 50% 76%, color-mix(in srgb, ${theme.accent} 26%, transparent), transparent 40%),
+               linear-gradient(145deg, color-mix(in srgb, ${theme.soft} 82%, white) 0%, ${dark ? '#110f14' : '#f8f7f4'} 42%, color-mix(in srgb, ${theme.accent} 28%, ${theme.soft}) 100%)`
             : dark
               ? 'linear-gradient(145deg, #17150f 0%, #11100d 100%)'
               : 'transparent',
@@ -85,8 +86,12 @@ const ThemedWrapper = ({ children }) => {
           mixBlendMode: dark ? 'normal' : 'multiply',
         }}
       />
+      <div className="mood-energy-grid pointer-events-none fixed inset-0 z-0" />
+      <div className="mood-light-rays pointer-events-none fixed inset-0 z-0" />
+      <div className="mood-aurora-band pointer-events-none fixed inset-0 z-0" />
       <div className="mood-breath-field pointer-events-none fixed inset-0 z-0" />
       <div className="ambient-mood-orb pointer-events-none fixed -bottom-28 -right-24 z-0 h-80 w-80 rounded-full" />
+      <div className="ambient-mood-orb ambient-mood-orb-secondary pointer-events-none fixed -top-16 left-[-4rem] z-0 h-72 w-72 rounded-full" />
       <div key={location.pathname} className="route-transition relative z-10 min-h-screen">{children}</div>
     </div>
   );
