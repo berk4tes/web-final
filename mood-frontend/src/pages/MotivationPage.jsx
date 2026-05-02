@@ -59,6 +59,14 @@ const DAILY_TASKS = [
   },
 ];
 
+const REVIEW_EMOTIONS = [
+  { id: 'bright', label: { en: 'Bright', tr: 'Parlak' } },
+  { id: 'calm', label: { en: 'Calm', tr: 'Sakin' } },
+  { id: 'romantic', label: { en: 'Romantic', tr: 'Romantik' } },
+  { id: 'nostalgic', label: { en: 'Nostalgic', tr: 'Nostaljik' } },
+  { id: 'energized', label: { en: 'Energized', tr: 'Canlı' } },
+];
+
 const SEASON_ROOMS = {
   spring: {
     title: { en: 'Spring Rewatch Room', tr: 'Spring Rewatch Odası' },
@@ -165,6 +173,13 @@ const getSeasonKey = (date = new Date()) => {
   return 'winter';
 };
 
+const seasonColorKey = (seasonKey) => ({
+  spring: 'calm',
+  summer: 'happy',
+  autumn: 'nostalgic',
+  winter: 'sad',
+}[seasonKey] || 'calm');
+
 const contentTypeLabel = (type, tr) => ({
   movie: tr ? 'film' : 'movie',
   series: tr ? 'dizi' : 'series',
@@ -221,6 +236,92 @@ const MedalIcon = () => (
   </svg>
 );
 
+const StarIcon = ({ filled }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m12 3 2.7 5.48 6.05.88-4.38 4.27 1.03 6.02L12 16.8l-5.4 2.85 1.03-6.02-4.38-4.27 6.05-.88L12 3z" />
+  </svg>
+);
+
+const SpringReviewModal = ({
+  draft,
+  rating,
+  emotion,
+  language,
+  saving,
+  onClose,
+  onRating,
+  onEmotion,
+  onSave,
+}) => {
+  if (!draft) return null;
+  const tr = language === 'tr';
+  const typeLabel = draft.shelf === 'music'
+    ? (tr ? 'müzik' : 'music')
+    : draft.shelf === 'reads'
+      ? (tr ? 'kitap' : 'book')
+      : (tr ? 'film/dizi' : 'film/series');
+
+  return (
+    <div className="spring-review-backdrop" role="dialog" aria-modal="true">
+      <div className="spring-review-modal">
+        <button
+          type="button"
+          className="spring-review-close"
+          onClick={onClose}
+          aria-label={tr ? 'Kapat' : 'Close'}
+        />
+        <div className="spring-review-poster" data-kind={draft.shelf}>
+          <span>{typeLabel}</span>
+          <strong>{draft.title}</strong>
+          <em>{tr ? 'Spring challenge' : 'Spring challenge'}</em>
+        </div>
+        <div className="spring-review-copy">
+          <span>{tr ? 'Tamamlandı' : 'Completed'}</span>
+          <h2>{tr ? 'Nasıl hissettirdi?' : 'How did it land?'}</h2>
+          <p>
+            {tr
+              ? 'Puanını ve baskın duygunu seç; challenge kaydın backend’e yazılsın.'
+              : 'Pick a rating and the strongest emotion; your challenge note will be saved to the backend.'}
+          </p>
+          <div className="spring-review-stars" aria-label={tr ? 'Puan' : 'Rating'}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onRating(value)}
+                className={value <= rating ? 'is-filled' : ''}
+                aria-label={`${value}/5`}
+              >
+                <StarIcon filled={value <= rating} />
+              </button>
+            ))}
+          </div>
+          <div className="spring-review-emotions">
+            {REVIEW_EMOTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onEmotion(item.id)}
+                className={emotion === item.id ? 'is-selected' : ''}
+              >
+                {item.label[language]}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="spring-review-save"
+            onClick={onSave}
+            disabled={saving || !rating || !emotion}
+          >
+            {saving ? (tr ? 'Kaydediliyor...' : 'Saving...') : (tr ? 'Kaydet' : 'Save reflection')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MotivationPage = () => {
   const { user } = useAuth();
   const { prefs, t } = useUserPreferences();
@@ -235,6 +336,10 @@ const MotivationPage = () => {
   const [roomPick, setRoomPick] = useState('');
   const [seasonalProgress, setSeasonalProgress] = useState(readSeasonalProgress);
   const [savedVibes, setSavedVibes] = useState(() => readJsonArray(SAVED_VIBES_KEY));
+  const [reviewDraft, setReviewDraft] = useState(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewEmotion, setReviewEmotion] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
 
   const loadSummary = async () => {
     try {
@@ -306,7 +411,7 @@ const MotivationPage = () => {
 
   const streak = calculateStreak(game.checkins);
   const activeMood = MOODS.find((mood) => mood.id === todayCheckin?.moodId) || MOODS[0];
-  const activeColor = getVibeColor(moodColorKey(activeMood.id));
+  const activeColor = getVibeColor(seasonColorKey(seasonKey));
   const totalXp = summary?.currentUser?.xp ?? game.xp;
   const level = getLevel(totalXp);
   const completedCount = DAILY_TASKS.filter((task) => completedTaskIds.has(task.id)).length;
@@ -443,7 +548,14 @@ const MotivationPage = () => {
     const currentSeason = seasonalProgress[seasonKey] || {};
     const currentShelf = currentSeason[shelf] || [];
     if (currentShelf.includes(key)) {
-      toast(tr ? 'Bu seçim zaten tamamlandı' : 'This pick is already complete');
+      const contentType = shelf === 'movies'
+        ? (SERIES_TITLES.has(title) ? 'series' : 'movie')
+        : shelf === 'reads'
+          ? 'book'
+          : 'music';
+      setReviewDraft({ seasonKey, shelf, title, contentType });
+      setReviewRating(0);
+      setReviewEmotion('');
       return;
     }
 
@@ -498,9 +610,18 @@ const MotivationPage = () => {
     if (completedCountForShelf === totalForShelf) {
       toast.success(tr ? 'Badge kazandın' : 'Badge unlocked');
     }
+
+    const contentType = shelf === 'movies'
+      ? (SERIES_TITLES.has(title) ? 'series' : 'movie')
+      : shelf === 'reads'
+        ? 'book'
+        : 'music';
+    setReviewDraft({ seasonKey, shelf, title, contentType });
+    setReviewRating(0);
+    setReviewEmotion('');
   };
 
-  const handleEmotionNote = () => {
+  const handleEmotionNote = async () => {
     const currentSeason = seasonalProgress[seasonKey] || {};
     const emotions = currentSeason.emotions || [];
     if (!emotions.includes(today)) {
@@ -514,7 +635,27 @@ const MotivationPage = () => {
       setSeasonalProgress(nextProgress);
       writeSeasonalProgress(nextProgress);
     }
-    awardTask(DAILY_TASKS.find((task) => task.id === 'emotionNote'));
+    await awardTask(DAILY_TASKS.find((task) => task.id === 'emotionNote'));
+  };
+
+  const handleSaveReview = async () => {
+    if (!reviewDraft || !reviewRating || !reviewEmotion) return;
+    setReviewSaving(true);
+    try {
+      await api.post('/motivation/spring-review', {
+        ...reviewDraft,
+        rating: reviewRating,
+        emotion: reviewEmotion,
+      });
+      await handleEmotionNote();
+      await loadSummary();
+      toast.success(tr ? 'Spring kaydın eklendi' : 'Spring reflection saved');
+      setReviewDraft(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || (tr ? 'Kayıt yapılamadı' : 'Could not save reflection'));
+    } finally {
+      setReviewSaving(false);
+    }
   };
 
   return (
@@ -537,9 +678,6 @@ const MotivationPage = () => {
           </p>
           <div className="mot-v3-actions">
             <Link to="/vibe">{tr ? 'Yeni vibe üret' : 'Generate a vibe'}</Link>
-            <button type="button" onClick={() => setActiveShelf('chat')}>
-              {tr ? 'Mood chat aç' : 'Open mood chat'}
-            </button>
           </div>
         </div>
 
@@ -638,7 +776,6 @@ const MotivationPage = () => {
               ['movies', tr ? 'Film & Dizi' : 'Film & Series'],
               ['reads', tr ? 'Spring Reads' : 'Spring Reads'],
               ['music', tr ? 'Spring Music' : 'Spring Music'],
-              ['chat', tr ? 'Mood chat' : 'Mood chat'],
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -725,6 +862,18 @@ const MotivationPage = () => {
         <span><MedalIcon /> {level.current.title}</span>
         <strong>{tr ? 'Bu odadaki her etkileşim leaderboard’a bağlanır.' : 'Every interaction in this room feeds the leaderboard.'}</strong>
       </section>
+
+      <SpringReviewModal
+        draft={reviewDraft}
+        rating={reviewRating}
+        emotion={reviewEmotion}
+        language={prefs.language}
+        saving={reviewSaving}
+        onClose={() => setReviewDraft(null)}
+        onRating={setReviewRating}
+        onEmotion={setReviewEmotion}
+        onSave={handleSaveReview}
+      />
     </div>
   );
 };

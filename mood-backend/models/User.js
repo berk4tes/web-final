@@ -42,6 +42,40 @@ const userSchema = new mongoose.Schema(
         type: Date,
         default: Date.now,
       },
+      springReviews: [
+        {
+          seasonKey: {
+            type: String,
+            default: 'spring',
+          },
+          shelf: {
+            type: String,
+            enum: ['movies', 'reads', 'music'],
+          },
+          contentType: {
+            type: String,
+            enum: ['movie', 'series', 'book', 'music'],
+          },
+          title: {
+            type: String,
+            trim: true,
+            maxlength: 160,
+          },
+          rating: {
+            type: Number,
+            min: 1,
+            max: 5,
+          },
+          emotion: {
+            type: String,
+            enum: ['bright', 'calm', 'romantic', 'nostalgic', 'energized'],
+          },
+          reviewedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
     },
     createdAt: {
       type: Date,

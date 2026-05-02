@@ -466,6 +466,9 @@ const VibePage = () => {
   };
   const getMovieSearch = (item, service) => {
     const query = encodeURIComponent(item?.title || '');
+    if (service === 'trailer') {
+      return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${item?.title || ''} trailer`)}`;
+    }
     return service === 'letterboxd'
       ? `https://letterboxd.com/search/${query}/`
       : `https://www.imdb.com/find/?q=${query}`;
@@ -649,9 +652,14 @@ const VibePage = () => {
                   <p>{vibeData.mood?.description || vibeData.prompt}</p>
                 </div>
                 <div className="zero-manifesto-actions">
-                  {(vibeData.mood?.tags || []).slice(0, 5).map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
+                  <div className="mood-tag-board">
+                    {(vibeData.mood?.tags || []).slice(0, 5).map((tag, index) => (
+                      <span key={tag} style={{ '--tag-index': index }}>
+                        <em>{String(index + 1).padStart(2, '0')}</em>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                   <button type="button" onClick={handleSaveVibe} className="action-bookmark">
                     {isSaved ? t('vibeSaved') : t('saveVibe')}
                   </button>
@@ -850,9 +858,14 @@ const VibePage = () => {
                     {activeMovie?.genre && <p className="cinema-info-genre">{activeMovie.genre}</p>}
                     <p className="cinema-info-desc">{activeMovie?.aiExplanation || activeMovie?.overview}</p>
                     <div className="cinema-info-actions">
-                      <button type="button" className="action-detail" onClick={() => activeMovie && setMovieDetail(activeMovie)}>
-                        {prefs.language === 'tr' ? 'Perdeye yansıt' : 'Project it'}
-                      </button>
+                      <a
+                        className="action-detail"
+                        href={getMovieSearch(activeMovie, 'trailer')}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Trailer
+                      </a>
                       <button type="button" className="action-favorite" onClick={() => activeMovie && handleToggleFavoriteAndHide(activeMovie, 'movie')}>
                         {isFavorite(getItemId(activeMovie)) ? t('inFavorites') : t('addFavorite')}
                       </button>

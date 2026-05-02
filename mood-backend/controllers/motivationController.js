@@ -133,7 +133,70 @@ exports.getSummary = asyncHandler(async (req, res) => {
         ...(currentRow || {}),
         tasksToday: taskLog[today] || [],
         taskLog,
+        springReviews: currentUser?.motivation?.springReviews || [],
       },
+    },
+  });
+});
+
+exports.saveSpringReview = asyncHandler(async (req, res) => {
+  const seasonKey = String(req.body?.seasonKey || 'spring').trim();
+  const shelf = String(req.body?.shelf || '').trim();
+  const contentType = String(req.body?.contentType || '').trim();
+  const title = String(req.body?.title || '').trim().slice(0, 160);
+  const emotion = String(req.body?.emotion || '').trim();
+  const rating = Number(req.body?.rating);
+  const allowedShelves = new Set(['movies', 'reads', 'music']);
+  const allowedTypes = new Set(['movie', 'series', 'book', 'music']);
+  const allowedEmotions = new Set(['bright', 'calm', 'romantic', 'nostalgic', 'energized']);
+
+  if (!allowedShelves.has(shelf) || !allowedTypes.has(contentType) || !title || !allowedEmotions.has(emotion) || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+    return res.status(422).json({ success: false, message: 'Invalid spring review payload' });
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  if (!user.motivation) {
+    user.motivation = { xp: 0, tasksByDay: new Map(), joinedAt: new Date(), springReviews: [] };
+  }
+
+  const reviews = user.motivation.springReviews || [];
+  const existingIndex = reviews.findIndex((item) => (
+    item.seasonKey === seasonKey &&
+    item.shelf === shelf &&
+    item.title?.toLowerCase() === title.toLowerCase()
+  ));
+  const review = {
+    seasonKey,
+    shelf,
+    contentType,
+    title,
+    rating: Math.round(rating),
+    emotion,
+    reviewedAt: new Date(),
+  };
+
+  if (existingIndex >= 0) {
+    const previous = typeof reviews[existingIndex].toObject === 'function'
+      ? reviews[existingIndex].toObject()
+      : reviews[existingIndex];
+    reviews[existingIndex] = { ...previous, ...review };
+  } else {
+    reviews.unshift(review);
+  }
+
+  user.motivation.springReviews = reviews.slice(0, 80);
+  user.markModified('motivation');
+  await user.save();
+
+  return res.json({
+    success: true,
+    data: {
+      review,
+      springReviews: user.motivation.springReviews,
     },
   });
 });
