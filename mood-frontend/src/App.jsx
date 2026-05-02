@@ -106,76 +106,90 @@ const AppFooter = () => (
   </footer>
 );
 
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Navigate to="/vibe" replace />} />
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/signup" element={<RegisterPage />} />
+    <Route
+      path="/vibe"
+      element={
+        <ProtectedRoute>
+          <VibePage />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="/mood" element={<Navigate to="/vibe" replace />} />
+    <Route
+      path="/dashboard"
+      element={
+        <ProtectedRoute>
+          <DashboardPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/motivation"
+      element={
+        <ProtectedRoute>
+          <MotivationPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/moodboard"
+      element={
+        <ProtectedRoute>
+          <DashboardPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/profile"
+      element={
+        <ProtectedRoute>
+          <ProfilePage />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<NotFoundPage />} />
+  </Routes>
+);
+
+const AppFrame = () => {
+  const location = useLocation();
+  const isAuthPage = ['/login', '/register', '/signup'].includes(location.pathname);
+
+  return (
+    <ThemedWrapper>
+      {!isAuthPage && <Navbar />}
+      <main className={isAuthPage ? 'auth-main' : undefined}>
+        <AppRoutes />
+      </main>
+      {!isAuthPage && <AppFooter />}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: 'var(--surface-strong)',
+            color: 'var(--ink-main)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            boxShadow: '0 8px 24px rgba(20,18,12,0.12)',
+          },
+          success: { iconTheme: { primary: '#7c5cff', secondary: '#fff' } },
+        }}
+      />
+    </ThemedWrapper>
+  );
+};
+
 const App = () => (
   <AuthProvider>
     <UserPreferencesProvider>
       <MoodThemeProvider>
-        <ThemedWrapper>
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<Navigate to="/vibe" replace />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route
-                path="/vibe"
-                element={
-                  <ProtectedRoute>
-                    <VibePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/mood" element={<Navigate to="/vibe" replace />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/motivation"
-                element={
-                  <ProtectedRoute>
-                    <MotivationPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/moodboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </main>
-          <AppFooter />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: 'var(--surface-strong)',
-                color: 'var(--ink-main)',
-                border: '1px solid var(--border)',
-                borderRadius: 16,
-                boxShadow: '0 8px 24px rgba(20,18,12,0.12)',
-              },
-              success: { iconTheme: { primary: '#7c5cff', secondary: '#fff' } },
-            }}
-          />
-        </ThemedWrapper>
+        <AppFrame />
       </MoodThemeProvider>
     </UserPreferencesProvider>
   </AuthProvider>

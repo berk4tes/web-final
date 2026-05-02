@@ -13,6 +13,7 @@ const moodRoutes = require('./routes/moodRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const motivationRoutes = require('./routes/motivationRoutes');
 
 const app = express();
 
@@ -25,6 +26,9 @@ app.use(
         'http://localhost:5173',
         'http://localhost:5174',
         'http://localhost:5175',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+        'http://127.0.0.1:5175',
       ];
       if (!origin || allowed.includes(origin)) return callback(null, true);
       callback(new Error('Not allowed by CORS'));
@@ -55,6 +59,7 @@ app.use('/api/moods', moodRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/motivation', motivationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });

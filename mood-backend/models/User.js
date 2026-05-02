@@ -27,6 +27,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    motivation: {
+      xp: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      tasksByDay: {
+        type: Map,
+        of: [String],
+        default: {},
+      },
+      joinedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
     createdAt: {
       type: Date,
       default: Date.now,

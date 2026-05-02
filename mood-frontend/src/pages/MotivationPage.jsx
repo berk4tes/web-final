@@ -3,8 +3,14 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import api from '../services/api';
+import { getVibeColor } from '../utils/constants';
 
 const GAME_KEY = 'moodflix.gameState';
+const SAVED_VIBES_KEY = 'moodflix.savedVibes';
+const WATCHED_KEY = 'moodflix.watched';
+const READ_KEY = 'moodflix.readBooks';
+const SEASONAL_PROGRESS_KEY = 'moodflix.seasonalProgress';
 
 const MOODS = [
   { id: 'happy', emoji: '😊', label: { en: 'Bright', tr: 'Parlak' }, room: 'Sunlit Watch Room' },
@@ -15,11 +21,86 @@ const MOODS = [
 ];
 
 const DAILY_TASKS = [
-  { id: 'checkin', xp: 50, label: { en: 'Mood check-in', tr: 'Mood check-in' } },
-  { id: 'film', xp: 80, label: { en: 'Finish a film or series episode', tr: 'Bir film veya dizi bölümü bitir' } },
-  { id: 'music', xp: 60, label: { en: 'Discover a new track', tr: 'Yeni bir şarkı keşfet' } },
-  { id: 'save', xp: 40, label: { en: 'Save one vibe', tr: 'Bir vibe kaydet' } },
+  {
+    id: 'checkin',
+    xp: 50,
+    label: { en: 'Drop today’s mood signal', tr: 'Bugünün mood sinyalini bırak' },
+    hint: { en: 'Adds your feeling to the room pulse.', tr: 'Hissini oda akışına ekler.' },
+  },
+  {
+    id: 'seasonalWatch',
+    xp: 80,
+    label: { en: 'Watch one seasonal film or series', tr: 'Bir sezon filmi/dizisi izle' },
+    hint: { en: 'Done when you mark a room movie or series watched.', tr: 'Oda listesinden film/dizi izledim deyince tamamlanır.' },
+  },
+  {
+    id: 'seasonalListen',
+    xp: 60,
+    label: { en: 'Listen to one seasonal track', tr: 'Bir sezon şarkısı dinle' },
+    hint: { en: 'Done when you mark a Spring track listened.', tr: 'Spring şarkısını dinledim deyince tamamlanır.' },
+  },
+  {
+    id: 'seasonalRead',
+    xp: 70,
+    label: { en: 'Read one seasonal book', tr: 'Bir sezon kitabı oku' },
+    hint: { en: 'Done when you mark a room book read.', tr: 'Oda kitabını okudum deyince tamamlanır.' },
+  },
+  {
+    id: 'emotionNote',
+    xp: 60,
+    label: { en: 'Pair an emotion with a title', tr: 'Bir içerikle duygu eşleştir' },
+    hint: { en: '“I felt calm while watching this.”', tr: '“Bunu izlerken sakin hissettim.”' },
+  },
+  {
+    id: 'save',
+    xp: 40,
+    label: { en: 'Save a vibe to your archive', tr: 'Arşivine bir vibe kaydet' },
+    hint: { en: 'Keep one recommendation for later.', tr: 'Bir öneriyi sonrası için sakla.' },
+  },
 ];
+
+const SEASON_ROOMS = {
+  spring: {
+    title: { en: 'Spring Rewatch Room', tr: 'Spring Rewatch Odası' },
+    subtitle: { en: 'First warm nights, soft rain, fresh-start stories.', tr: 'İlk sıcak akşamlar, hafif yağmur, yeni başlangıç hikayeleri.' },
+    cue: { en: 'Now open: spring rewatches', tr: 'Şimdi açık: spring rewatch' },
+    shelves: {
+      movies: ['Before Sunrise', 'Pride & Prejudice', 'Little Women', 'Past Lives', 'Notting Hill', 'Emma', 'Frances Ha', 'The Half of It', 'Gilmore Girls', 'Anne with an E', 'Heartstopper', 'Daisy Jones & The Six'],
+      reads: ['The Secret Garden', 'Normal People', 'A Room with a View', 'Anne of Green Gables', 'Emma', 'Writers & Lovers', 'Book Lovers', 'I Capture the Castle', 'The Enchanted April', 'Persuasion', 'The Blue Castle', 'Convenience Store Woman'],
+      music: ['Spring Day', 'Sweet Disposition', 'Bloom', 'April Come She Will', 'Strawberries & Cigarettes', 'There She Goes', 'First Day of My Life', 'Put Your Records On', 'Dreams', 'Sunflower', 'Garden Song', 'Lover'],
+    },
+  },
+  summer: {
+    title: { en: 'Summer Night Room', tr: 'Summer Night Odası' },
+    subtitle: { en: 'Late drives, open windows, high-glow discoveries.', tr: 'Gece yolları, açık camlar, parlak keşifler.' },
+    cue: { en: 'Now open: summer heat picks', tr: 'Şimdi açık: summer heat seçimleri' },
+    shelves: {
+      movies: ['Mamma Mia!', 'Call Me by Your Name', 'The Parent Trap', 'Moonrise Kingdom', 'The Talented Mr. Ripley', 'Before Sunset', 'Aftersun', 'The Way Way Back', 'Outer Banks', 'The Summer I Turned Pretty', 'Looking for Alaska', 'High Fidelity'],
+      reads: ['Malibu Rising', 'Beach Read', 'Daisy Jones & The Six', 'The Summer Book', 'Happy Place', 'The Vacationers', 'Every Summer After', 'The Paper Palace', 'Bonjour Tristesse', 'Call Me by Your Name', 'Open Water', 'Just Kids'],
+      music: ['Golden Hour', 'Cruel Summer', 'Sunflower', 'Heat Waves', 'Ribs', 'Good Days', 'Sweet Life', 'Summertime Sadness', 'Slide', 'Walking on a Dream', 'Electric Feel', 'Island in the Sun'],
+    },
+  },
+  autumn: {
+    title: { en: 'Autumn Rewatch Room', tr: 'Autumn Rewatch Odası' },
+    subtitle: { en: 'Campus walks, old letters, coffee-colored nostalgia.', tr: 'Kampüs yürüyüşleri, eski mektuplar, kahve tonlu nostalji.' },
+    cue: { en: 'Now open: autumn comfort rewatches', tr: 'Şimdi açık: autumn comfort rewatch' },
+    shelves: {
+      movies: ['When Harry Met Sally', 'Dead Poets Society', 'Fantastic Mr. Fox', 'You’ve Got Mail', 'Good Will Hunting', 'Mona Lisa Smile', 'Practical Magic', 'October Sky', 'Gilmore Girls', 'Over the Garden Wall', 'Only Murders in the Building', 'Fleabag'],
+      reads: ['If We Were Villains', 'The Secret History', 'Jane Eyre', 'Norwegian Wood', 'Rebecca', 'Babel', 'The Goldfinch', 'Ninth House', 'The Night Circus', 'A Little Life', 'The Bell Jar', 'Wuthering Heights'],
+      music: ['Cardigan', 'Autumn Leaves', 'There She Goes', 'Cherry Wine', 'Roslyn', 'Stick Season', 'Motion Sickness', 'Harvest Moon', 'Sweater Weather', 'All Too Well', 'Pink Moon', 'Landslide'],
+    },
+  },
+  winter: {
+    title: { en: 'Winter Slow Room', tr: 'Winter Slow Odası' },
+    subtitle: { en: 'Quiet rooms, deep focus, stories that stay warm.', tr: 'Sessiz odalar, derin odak, sıcak kalan hikayeler.' },
+    cue: { en: 'Now open: winter slow watches', tr: 'Şimdi açık: winter slow watch' },
+    shelves: {
+      movies: ['Carol', 'Little Women', 'The Holiday', 'The Grand Budapest Hotel', 'Eternal Sunshine of the Spotless Mind', 'About Time', 'Klaus', 'The Holdovers', 'Dash & Lily', 'Normal People', 'The Queen’s Gambit', 'Sherlock'],
+      reads: ['A Little Life', 'The Snow Child', 'Wintering', 'Wuthering Heights', 'The Bear and the Nightingale', 'The Left Hand of Darkness', 'The Remains of the Day', 'Frankenstein', 'The Little Prince', 'The Midnight Library', 'The Catcher in the Rye', 'Villette'],
+      music: ['Mystery of Love', 'River', 'Holocene', 'No Surprises', 'White Winter Hymnal', 're: Stacks', 'Fourth of July', 'The Night We Met', 'Skinny Love', 'Vienna', 'Fade Into You', 'To Build a Home'],
+    },
+  },
+};
 
 const LEVELS = [
   { min: 0, title: 'Mood Hunter' },
@@ -69,6 +150,70 @@ const calculateStreak = (checkins) => {
   return streak;
 };
 
+const moodColorKey = (moodId) => (moodId === 'intense' ? 'angry' : moodId);
+const moodApiLabel = (moodId) => {
+  if (moodId === 'dreamy') return 'calm';
+  if (moodId === 'intense') return 'angry';
+  return moodId;
+};
+
+const getSeasonKey = (date = new Date()) => {
+  const month = date.getMonth();
+  if (month >= 2 && month <= 4) return 'spring';
+  if (month >= 5 && month <= 7) return 'summer';
+  if (month >= 8 && month <= 10) return 'autumn';
+  return 'winter';
+};
+
+const contentTypeLabel = (type, tr) => ({
+  movie: tr ? 'film' : 'movie',
+  series: tr ? 'dizi' : 'series',
+  music: tr ? 'müzik' : 'track',
+  book: tr ? 'kitap' : 'book',
+}[type] || (tr ? 'içerik' : 'title'));
+
+const SERIES_TITLES = new Set([
+  'Gilmore Girls',
+  'Anne with an E',
+  'Heartstopper',
+  'Daisy Jones & The Six',
+  'Outer Banks',
+  'The Summer I Turned Pretty',
+  'Looking for Alaska',
+  'High Fidelity',
+  'Over the Garden Wall',
+  'Only Murders in the Building',
+  'Fleabag',
+  'Dash & Lily',
+  'Normal People',
+  'The Queen’s Gambit',
+  'Sherlock',
+]);
+
+const readJsonArray = (key) => {
+  try {
+    const items = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+};
+
+const readSeasonalProgress = () => {
+  try {
+    const progress = JSON.parse(localStorage.getItem(SEASONAL_PROGRESS_KEY) || '{}');
+    return progress && typeof progress === 'object' ? progress : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeSeasonalProgress = (progress) => {
+  localStorage.setItem(SEASONAL_PROGRESS_KEY, JSON.stringify(progress));
+};
+
+const getSeasonItemKey = (seasonKey, shelf, title) => `${seasonKey}:${shelf}:${title}`;
+
 const MedalIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 2h8l-2 7h-4L8 2z" />
@@ -81,43 +226,181 @@ const MotivationPage = () => {
   const { prefs, t } = useUserPreferences();
   const tr = prefs.language === 'tr';
   const today = localDateKey();
+  const seasonKey = useMemo(() => getSeasonKey(), []);
+  const seasonRoom = SEASON_ROOMS[seasonKey];
   const [game, setGame] = useState(readGameState);
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [activeShelf, setActiveShelf] = useState('movies');
+  const [roomPick, setRoomPick] = useState('');
+  const [seasonalProgress, setSeasonalProgress] = useState(readSeasonalProgress);
+  const [savedVibes, setSavedVibes] = useState(() => readJsonArray(SAVED_VIBES_KEY));
+
+  const loadSummary = async () => {
+    try {
+      const { data } = await api.get('/motivation/summary');
+      setSummary(data.data);
+    } catch (err) {
+      console.warn('Motivation summary failed:', err.message);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSummary();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(GAME_KEY, JSON.stringify(game));
   }, [game]);
 
-  const todayTasks = game.tasksByDay[today] || {};
-  const todayCheckin = game.checkins.find((item) => item.date === today);
-  const streak = calculateStreak(game.checkins);
-  const level = getLevel(game.xp);
-  const activeMood = MOODS.find((mood) => mood.id === todayCheckin?.moodId) || MOODS[0];
-  const completedCount = DAILY_TASKS.filter((task) => todayTasks[task.id]).length;
-
-  const battle = useMemo(() => {
-    const friendXp = 380 + streak * 35;
-    const weeklyXp = Math.min(760, game.xp % 900);
-    return {
-      you: weeklyXp,
-      friend: friendXp,
-      leading: weeklyXp >= friendXp,
-      gap: Math.abs(weeklyXp - friendXp),
+  useEffect(() => {
+    const refreshLocalSignals = () => {
+      setSeasonalProgress(readSeasonalProgress());
+      setSavedVibes(readJsonArray(SAVED_VIBES_KEY));
     };
-  }, [game.xp, streak]);
 
-  const leaderboard = useMemo(() => [
-    { name: user?.username || 'You', xp: game.xp, self: true },
-    { name: 'Lara', xp: 1380 },
-    { name: 'Mert', xp: 1120 },
-    { name: 'Selin', xp: 940 },
-    { name: 'Deniz', xp: 760 },
-  ].sort((a, b) => b.xp - a.xp), [game.xp, user?.username]);
+    window.addEventListener('storage', refreshLocalSignals);
+    window.addEventListener('focus', refreshLocalSignals);
+    return () => {
+      window.removeEventListener('storage', refreshLocalSignals);
+      window.removeEventListener('focus', refreshLocalSignals);
+    };
+  }, []);
 
-  const awardXp = (amount) => {
-    setGame((prev) => ({ ...prev, xp: prev.xp + amount }));
+  const todayTasks = game.tasksByDay[today] || {};
+  const remoteTasksToday = summary?.currentUser?.tasksToday || [];
+  const todayCheckin = game.checkins.find((item) => item.date === today);
+  const seasonProgress = seasonalProgress[seasonKey] || {};
+  const seasonShelfProgress = {
+    movies: seasonProgress.movies || [],
+    music: seasonProgress.music || [],
+    reads: seasonProgress.reads || [],
+    emotions: seasonProgress.emotions || [],
+  };
+  const savedToday = savedVibes.some((vibe) => localDateKey(vibe.savedAt) === today);
+  const inferredTaskIds = useMemo(() => [
+    todayCheckin ? 'checkin' : '',
+    seasonShelfProgress.movies.length ? 'seasonalWatch' : '',
+    seasonShelfProgress.music.length ? 'seasonalListen' : '',
+    seasonShelfProgress.reads.length ? 'seasonalRead' : '',
+    seasonShelfProgress.emotions.length ? 'emotionNote' : '',
+    savedToday ? 'save' : '',
+  ].filter(Boolean), [
+    savedToday,
+    seasonShelfProgress.emotions.length,
+    seasonShelfProgress.movies.length,
+    seasonShelfProgress.music.length,
+    seasonShelfProgress.reads.length,
+    todayCheckin,
+  ]);
+  const awardedTaskIds = useMemo(() => new Set([
+    ...Object.entries(todayTasks).filter(([, done]) => done).map(([id]) => id),
+    ...remoteTasksToday,
+  ]), [remoteTasksToday, todayTasks]);
+  const completedTaskIds = useMemo(() => new Set([
+    ...awardedTaskIds,
+    ...inferredTaskIds,
+  ]), [awardedTaskIds, inferredTaskIds]);
+
+  const streak = calculateStreak(game.checkins);
+  const activeMood = MOODS.find((mood) => mood.id === todayCheckin?.moodId) || MOODS[0];
+  const activeColor = getVibeColor(moodColorKey(activeMood.id));
+  const totalXp = summary?.currentUser?.xp ?? game.xp;
+  const level = getLevel(totalXp);
+  const completedCount = DAILY_TASKS.filter((task) => completedTaskIds.has(task.id)).length;
+  const taskProgress = Math.round((completedCount / DAILY_TASKS.length) * 100);
+  const nextXp = Math.max(0, level.next ? level.next.min - totalXp : 0);
+  const leaderboard = summary?.leaderboard?.length
+    ? summary.leaderboard
+    : [{ username: user?.username || 'You', xp: game.xp, rank: 1, self: true }];
+  const currentRank = leaderboard.find((item) => item.self)?.rank || 1;
+  const topRacers = leaderboard.slice(0, 5);
+  const moodChat = summary?.moodChat?.length ? summary.moodChat : [{
+    id: 'local-chat',
+    username: user?.username || 'Idil',
+    moodLabel: moodApiLabel(activeMood.id),
+    moodText: tr ? 'Spring odasında yeni bir his bıraktı.' : 'left a fresh feeling in the spring room.',
+    title: roomPick || seasonRoom.shelves.movies[0],
+    contentType: 'movie',
+  }];
+  const activeShelfItems = activeShelf === 'chat' ? [] : seasonRoom.shelves[activeShelf];
+  const seasonTotal = seasonRoom.shelves.movies.length + seasonRoom.shelves.music.length + seasonRoom.shelves.reads.length;
+  const seasonCompleted = seasonShelfProgress.movies.length + seasonShelfProgress.music.length + seasonShelfProgress.reads.length;
+  const badgeRows = [
+    {
+      id: 'watch',
+      label: tr ? 'Spring Screen Badge' : 'Spring Screen Badge',
+      done: seasonShelfProgress.movies.length >= seasonRoom.shelves.movies.length,
+      count: `${seasonShelfProgress.movies.length}/${seasonRoom.shelves.movies.length}`,
+    },
+    {
+      id: 'listen',
+      label: tr ? 'Spring Sound Badge' : 'Spring Sound Badge',
+      done: seasonShelfProgress.music.length >= seasonRoom.shelves.music.length,
+      count: `${seasonShelfProgress.music.length}/${seasonRoom.shelves.music.length}`,
+    },
+    {
+      id: 'read',
+      label: tr ? 'Spring Reads Badge' : 'Spring Reads Badge',
+      done: seasonShelfProgress.reads.length >= seasonRoom.shelves.reads.length,
+      count: `${seasonShelfProgress.reads.length}/${seasonRoom.shelves.reads.length}`,
+    },
+    {
+      id: 'curator',
+      label: tr ? 'Season Curator' : 'Season Curator',
+      done: seasonCompleted >= seasonTotal,
+      count: `${seasonCompleted}/${seasonTotal}`,
+    },
+  ];
+
+  const markTaskLocal = (task, addXp = false) => {
+    setGame((prev) => {
+      const dayTasks = prev.tasksByDay[today] || {};
+      if (dayTasks[task.id]) return prev;
+      return {
+        ...prev,
+        xp: prev.xp + (addXp ? task.xp : 0),
+        tasksByDay: {
+          ...prev.tasksByDay,
+          [today]: { ...dayTasks, [task.id]: true },
+        },
+      };
+    });
   };
 
-  const handleCheckin = (mood) => {
+  const awardTask = async (task) => {
+    if (!task) return false;
+    if (awardedTaskIds.has(task.id)) return false;
+    try {
+      const { data } = await api.post('/motivation/award', { taskId: task.id });
+      setSummary((prev) => ({
+        ...(prev || {}),
+        leaderboard: data.data.leaderboard || prev?.leaderboard || [],
+        currentUser: data.data.currentUser || prev?.currentUser,
+        moodChat: prev?.moodChat || [],
+      }));
+      markTaskLocal(task, false);
+      if (data.data.awarded) toast.success(`+${data.data.xpAwarded} XP`);
+      return true;
+    } catch (err) {
+      console.warn('Motivation award failed:', err.message);
+      markTaskLocal(task, true);
+      toast.success(`+${task.xp} XP`);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    inferredTaskIds.forEach((taskId) => {
+      if (awardedTaskIds.has(taskId)) return;
+      const task = DAILY_TASKS.find((item) => item.id === taskId);
+      if (task) awardTask(task);
+    });
+  }, [inferredTaskIds.join('|'), Array.from(awardedTaskIds).join('|')]);
+
+  const handleCheckin = async (mood) => {
     if (todayCheckin) {
       setGame((prev) => ({
         ...prev,
@@ -129,255 +412,319 @@ const MotivationPage = () => {
 
     setGame((prev) => ({
       ...prev,
-      xp: prev.xp + 50,
       checkins: [{ date: today, moodId: mood.id }, ...prev.checkins].slice(0, 60),
-      tasksByDay: {
-        ...prev.tasksByDay,
-        [today]: { ...(prev.tasksByDay[today] || {}), checkin: true },
-      },
     }));
-    toast.success('+50 XP');
+
+    try {
+      await api.post('/moods', {
+        moodLabel: moodApiLabel(mood.id),
+        moodText: tr
+          ? `${mood.label.tr} hissi motivation odasına eklendi`
+          : `${mood.label.en} feeling added to the motivation room`,
+        intensity: 7,
+      });
+    } catch (err) {
+      console.warn('Mood check-in log failed:', err.message);
+    }
+
+    await awardTask(DAILY_TASKS[0]);
+    loadSummary();
   };
 
   const handleTaskToggle = (task) => {
-    if (todayTasks[task.id]) return;
-    setGame((prev) => ({
-      ...prev,
-      xp: prev.xp + task.xp,
-      tasksByDay: {
-        ...prev.tasksByDay,
-        [today]: { ...(prev.tasksByDay[today] || {}), [task.id]: true },
-      },
-    }));
-    toast.success(`+${task.xp} XP`);
+    toast(tr
+      ? `${task.label.tr} gerçek aksiyonla tamamlanır.`
+      : `${task.label.en} completes from the real action.`);
+  };
+
+  const handleSeasonalComplete = async (shelf, title) => {
+    setRoomPick(title);
+    const key = getSeasonItemKey(seasonKey, shelf, title);
+    const currentSeason = seasonalProgress[seasonKey] || {};
+    const currentShelf = currentSeason[shelf] || [];
+    if (currentShelf.includes(key)) {
+      toast(tr ? 'Bu seçim zaten tamamlandı' : 'This pick is already complete');
+      return;
+    }
+
+    const nextSeason = {
+      ...currentSeason,
+      [shelf]: [...currentShelf, key],
+    };
+    const nextProgress = {
+      ...seasonalProgress,
+      [seasonKey]: nextSeason,
+    };
+    setSeasonalProgress(nextProgress);
+    writeSeasonalProgress(nextProgress);
+
+    if (shelf === 'movies') {
+      const contentType = SERIES_TITLES.has(title) ? 'series' : 'movie';
+      const existing = readJsonArray(WATCHED_KEY);
+      const entry = {
+        externalId: key,
+        title,
+        thumbnail: '',
+        contentType,
+        watchedAt: new Date().toISOString(),
+      };
+      if (!existing.some((item) => (item.externalId || item.title) === entry.externalId)) {
+        localStorage.setItem(WATCHED_KEY, JSON.stringify([entry, ...existing].slice(0, 100)));
+      }
+      await awardTask(DAILY_TASKS.find((task) => task.id === 'seasonalWatch'));
+    }
+
+    if (shelf === 'music') {
+      await awardTask(DAILY_TASKS.find((task) => task.id === 'seasonalListen'));
+    }
+
+    if (shelf === 'reads') {
+      const existing = readJsonArray(READ_KEY);
+      const entry = {
+        externalId: key,
+        title,
+        thumbnail: '',
+        contentType: 'book',
+        readAt: new Date().toISOString(),
+      };
+      if (!existing.some((item) => (item.externalId || item.title) === entry.externalId)) {
+        localStorage.setItem(READ_KEY, JSON.stringify([entry, ...existing].slice(0, 100)));
+      }
+      await awardTask(DAILY_TASKS.find((task) => task.id === 'seasonalRead'));
+    }
+
+    const completedCountForShelf = nextSeason[shelf].length;
+    const totalForShelf = seasonRoom.shelves[shelf].length;
+    if (completedCountForShelf === totalForShelf) {
+      toast.success(tr ? 'Badge kazandın' : 'Badge unlocked');
+    }
+  };
+
+  const handleEmotionNote = () => {
+    const currentSeason = seasonalProgress[seasonKey] || {};
+    const emotions = currentSeason.emotions || [];
+    if (!emotions.includes(today)) {
+      const nextProgress = {
+        ...seasonalProgress,
+        [seasonKey]: {
+          ...currentSeason,
+          emotions: [...emotions, today],
+        },
+      };
+      setSeasonalProgress(nextProgress);
+      writeSeasonalProgress(nextProgress);
+    }
+    awardTask(DAILY_TASKS.find((task) => task.id === 'emotionNote'));
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6 sm:pt-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-ink-100 bg-white/85 p-5 shadow-soft backdrop-blur sm:p-8 lg:p-10">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-rose-300 to-amber-300" />
-        <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-          <div>
-            <span className="section-eyebrow">{t('navMotivation')}</span>
-            <h1 className="mt-3 font-display text-4xl font-semibold leading-[1.04] tracking-tight text-ink-700 text-balance sm:text-6xl">
-              {tr ? 'Moodunu oyuna çevir.' : 'Turn your mood into momentum.'}
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-500 sm:text-lg">
-              {tr
-                ? 'Günlük check-in yap, XP kazan, streak koru ve arkadaşlarınla haftalık vibe yarışına katıl.'
-                : 'Check in daily, earn XP, protect your streak, and join a weekly vibe race with friends.'}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <span className="chip-accent">{level.current.title}</span>
-              <span className="chip">{streak}/7 {tr ? 'gün streak' : 'day streak'}</span>
-              <span className="chip">{completedCount}/{DAILY_TASKS.length} {tr ? 'görev' : 'tasks'}</span>
-            </div>
+    <div
+      className="mot-page mot-v3"
+      style={{
+        '--mot-accent': activeColor.accent,
+        '--mot-soft': activeColor.soft,
+        '--mot-ink': activeColor.ink,
+      }}
+    >
+      <section className="mot-v3-hero">
+        <div className="mot-v3-copy">
+          <span>{t('navMotivation')} / {seasonRoom.cue[prefs.language]}</span>
+          <h1>{seasonRoom.title[prefs.language]}</h1>
+          <p>
+            {tr
+              ? 'Bu sayfa artık gerçek bir yarış alanı: DB’deki herkes XP ile sıralanır, günlük görevler hesabına yazılır ve sezon odasında moodlar içeriklerle eşleşir.'
+              : 'This is now a real race space: every database user enters by XP, daily quests write to your account, and the seasonal room connects moods with titles.'}
+          </p>
+          <div className="mot-v3-actions">
+            <Link to="/vibe">{tr ? 'Yeni vibe üret' : 'Generate a vibe'}</Link>
+            <button type="button" onClick={() => setActiveShelf('chat')}>
+              {tr ? 'Mood chat aç' : 'Open mood chat'}
+            </button>
           </div>
+        </div>
 
-          <div className="rounded-[1.5rem] border border-ink-100 bg-white/75 p-5 shadow-soft">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-ink-500">{level.current.title}</p>
-                <p className="font-display text-4xl font-semibold text-ink-700">{game.xp} XP</p>
-              </div>
-              <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-accent to-rose-300 text-3xl text-white shadow-glow">
-                {activeMood.emoji}
-              </div>
-            </div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-ink-100">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${level.progress}%` }} />
-            </div>
-            <p className="mt-2 text-xs text-ink-400">
-              {level.next
-                ? `${level.next.min - game.xp} XP ${tr ? 'sonra' : 'to'} ${level.next.title}`
-                : tr ? 'En üst seviyedesin' : 'Top level unlocked'}
-            </p>
+        <div className="mot-v3-rank">
+          <span>{tr ? 'global rank' : 'global rank'}</span>
+          <strong>#{currentRank}</strong>
+          <em>{totalXp} XP</em>
+          <div>
+            <i style={{ width: `${level.progress}%` }} />
           </div>
+          <small>
+            {level.next
+              ? `${nextXp} XP ${tr ? 'sonra' : 'to'} ${level.next.title}`
+              : tr ? 'En üst seviye açık' : 'Top level unlocked'}
+          </small>
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <section className="card">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <span className="section-eyebrow">{tr ? 'Günlük mood check-in' : 'Daily mood check-in'}</span>
-              <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">
-                {tr ? 'Bugün nasıl hissediyorsun?' : 'How are you feeling today?'}
-              </h2>
-            </div>
-            <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-ink">+50 XP</span>
+      <section className="mot-v3-race">
+        <div className="mot-v3-leaderboard">
+          <div className="mot-v3-section-head">
+            <span>{tr ? 'Gerçek leaderboard' : 'Real leaderboard'}</span>
+            <strong>{summaryLoading ? (tr ? 'yükleniyor' : 'loading') : `${leaderboard.length} users`}</strong>
           </div>
+          <div className="mot-v3-leader-rows">
+            {topRacers.map((item) => (
+              <div key={item.userId || item.username} className={item.self ? 'is-self' : ''}>
+                <span>{item.rank}</span>
+                <strong>{item.username || item.name}</strong>
+                <em>{item.xp} XP</em>
+                <i style={{ width: `${Math.min(100, (item.xp / Math.max(topRacers[0]?.xp || 1, 1)) * 100)}%` }} />
+              </div>
+            ))}
+          </div>
+        </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mot-v3-checkin">
+          <div className="mot-v3-section-head">
+            <span>{tr ? 'Bugünün moodu' : 'Today’s mood'}</span>
+            <strong>{streak}/7 streak</strong>
+          </div>
+          <div className="mot-v3-moods">
             {MOODS.map((mood) => {
               const selected = todayCheckin?.moodId === mood.id;
+              const color = getVibeColor(moodColorKey(mood.id));
               return (
                 <button
                   key={mood.id}
                   type="button"
                   onClick={() => handleCheckin(mood)}
-                  className={`rounded-3xl border p-4 text-left transition hover:-translate-y-1 hover:shadow-soft ${
-                    selected ? 'border-accent bg-accent/10' : 'border-ink-100 bg-white/70'
-                  }`}
+                  className={selected ? 'is-selected' : ''}
+                  style={{ '--token-accent': color.accent }}
                 >
-                  <span className="text-3xl">{mood.emoji}</span>
-                  <span className="mt-3 block text-sm font-semibold text-ink-700">{mood.label[prefs.language]}</span>
-                  <span className="mt-1 block text-xs text-ink-400">
-                    {selected ? (tr ? 'Bugünün moodu' : 'Today’s mood') : (tr ? 'Seç' : 'Choose')}
-                  </span>
+                  <span>{mood.emoji}</span>
+                  <strong>{mood.label[prefs.language]}</strong>
                 </button>
               );
             })}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="card">
-          <span className="section-eyebrow">{tr ? '7 günlük seri' : '7 day streak'}</span>
-          <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">{streak}/7</h2>
-          <div className="mt-5 grid grid-cols-7 gap-1.5">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <div
-                key={index}
-                className={`aspect-square rounded-2xl border ${
-                  index < streak ? 'border-orange-300 bg-orange-100' : 'border-ink-100 bg-white/70'
-                }`}
-              />
+      <section className="mot-v3-quests">
+        <div className="mot-v3-section-head">
+          <span>{tr ? 'Daily quests' : 'Daily quests'}</span>
+          <strong>{taskProgress}%</strong>
+        </div>
+        <div className="mot-v3-quest-grid">
+          {DAILY_TASKS.map((task, index) => {
+            const done = completedTaskIds.has(task.id);
+            return (
+              <button
+                key={task.id}
+                type="button"
+                onClick={() => handleTaskToggle(task)}
+                disabled={done}
+                className={done ? 'is-done' : ''}
+              >
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <strong>{task.label[prefs.language]}</strong>
+                <p>{task.hint[prefs.language]}</p>
+                <em>{done ? (tr ? 'tamamlandı' : 'completed') : `+${task.xp} XP`}</em>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mot-v3-room">
+        <div className="mot-v3-room-intro">
+          <span>{tr ? 'Sezon odası' : 'Seasonal room'}</span>
+          <h2>{seasonRoom.title[prefs.language]}</h2>
+          <p>{seasonRoom.subtitle[prefs.language]}</p>
+          <div className="mot-v3-room-tabs">
+            {[
+              ['movies', tr ? 'Film & Dizi' : 'Film & Series'],
+              ['reads', tr ? 'Spring Reads' : 'Spring Reads'],
+              ['music', tr ? 'Spring Music' : 'Spring Music'],
+              ['chat', tr ? 'Mood chat' : 'Mood chat'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveShelf(key)}
+                className={activeShelf === key ? 'is-active' : ''}
+              >
+                {label}
+              </button>
             ))}
           </div>
-          <p className="mt-4 text-sm text-ink-400">
-            {tr
-              ? 'Her gün check-in yaparak rozetleri ve daha yüksek XP çarpanlarını aç.'
-              : 'Check in every day to unlock badges and higher XP multipliers.'}
-          </p>
-        </section>
-      </div>
+        </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <section className="card">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <span className="section-eyebrow">{tr ? 'Günlük görevler' : 'Daily quests'}</span>
-              <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">
-                {tr ? 'Bugünün XP planı' : 'Today’s XP plan'}
-              </h2>
-            </div>
-            <Link to="/vibe" className="btn-secondary">{tr ? 'Keşfe git' : 'Go discover'}</Link>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {DAILY_TASKS.map((task) => {
-              const done = Boolean(todayTasks[task.id]);
+        {activeShelf === 'chat' ? (
+          <div className="mot-v3-chat">
+            {moodChat.slice(0, 6).map((item) => {
+              const chatColor = getVibeColor(item.moodLabel);
               return (
                 <button
-                  key={task.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => handleTaskToggle(task)}
-                  disabled={done}
-                  className={`flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left transition ${
-                    done
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                      : 'border-ink-100 bg-white/70 hover:-translate-y-0.5 hover:shadow-soft'
-                  }`}
+                  onClick={handleEmotionNote}
+                  style={{ '--chat-accent': chatColor.accent }}
                 >
-                  <span>
-                    <span className="block text-sm font-semibold">{task.label[prefs.language]}</span>
-                    <span className="mt-1 block text-xs text-ink-400">+{task.xp} XP</span>
-                  </span>
-                  <span className={`grid h-9 w-9 place-items-center rounded-full text-sm font-bold ${
-                    done ? 'bg-emerald-500 text-white' : 'bg-ink-100 text-ink-400'
-                  }`}>
-                    {done ? '✓' : '+'}
-                  </span>
+                  <span>{item.username}</span>
+                  <strong>
+                    {tr
+                      ? `${contentTypeLabel(item.contentType, tr)} ${item.title || roomPick || seasonRoom.shelves.movies[0]} sırasında ${item.moodLabel} hissetti`
+                      : `felt ${item.moodLabel} while ${item.contentType ? `${contentTypeLabel(item.contentType, tr)} ` : ''}${item.title || roomPick || seasonRoom.shelves.movies[0]}`}
+                  </strong>
+                  <em>{item.moodText || (tr ? 'Mood sinyali odaya düştü.' : 'A mood signal entered the room.')}</em>
                 </button>
               );
             })}
           </div>
-        </section>
-
-        <section className="relative overflow-hidden rounded-3xl border border-ink-100 bg-ink-700 p-6 text-white shadow-soft">
-          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/30 blur-3xl" />
-          <div className="relative">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-              {tr ? 'Mood battle' : 'Mood battle'}
-            </span>
-            <h2 className="mt-2 font-display text-3xl font-semibold">
-              {battle.leading ? (tr ? 'Öndesin' : 'You are leading') : (tr ? 'Yetişebilirsin' : 'You can catch up')}
-            </h2>
-            <p className="mt-2 text-sm text-white/65">
-              {battle.leading
-                ? `${battle.gap} XP ${tr ? 'farkla haftalık yarışta öndesin.' : 'ahead in this weekly race.'}`
-                : `${battle.gap} XP ${tr ? 'fark var. Bir görev daha kapat.' : 'behind. Clear one more quest.'}`}
-            </p>
-            <div className="mt-6 space-y-3">
-              {[['You', battle.you], ['Best friend', battle.friend]].map(([name, xp]) => (
-                <div key={name}>
-                  <div className="mb-1 flex justify-between text-xs text-white/70">
-                    <span>{name}</span>
-                    <span>{xp} XP</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/15">
-                    <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (xp / 800) * 100)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <section className="card">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <span className="section-eyebrow">{tr ? 'Vibe room' : 'Vibe room'}</span>
-              <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">{activeMood.room}</h2>
-              <p className="mt-2 max-w-xl text-sm text-ink-400">
-                {tr
-                  ? 'Aynı mooda sahip kullanıcılarla izleme odasına katıl ve beraber öneri keşfet.'
-                  : 'Join users with the same mood and discover watch picks together.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => awardXp(20)}
-              className="btn-primary"
-            >
-              {tr ? 'Odaya katıl' : 'Join room'}
-            </button>
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {['Live watchlist', 'Mood chat', 'Group picks'].map((item, index) => (
-              <div key={item} className="rounded-2xl border border-ink-100 bg-white/70 p-4">
-                <p className="text-sm font-semibold text-ink-700">{tr ? ['Canlı izleme listesi', 'Mood sohbeti', 'Grup seçimleri'][index] : item}</p>
-                <p className="mt-1 text-xs text-ink-400">{[18, 12, 7][index]} {tr ? 'aktif kullanıcı' : 'active users'}</p>
-              </div>
+        ) : (
+          <div className="mot-v3-shelf">
+            {activeShelfItems.map((title, index) => (
+              (() => {
+                const done = seasonShelfProgress[activeShelf].includes(getSeasonItemKey(seasonKey, activeShelf, title));
+                return (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={() => handleSeasonalComplete(activeShelf, title)}
+                    className={done ? 'is-picked' : ''}
+                  >
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <strong>{title}</strong>
+                    <em>
+                      {done
+                        ? (tr ? 'tamamlandı' : 'complete')
+                        : activeShelf === 'movies'
+                          ? (tr ? 'izledim' : 'mark watched')
+                          : activeShelf === 'reads'
+                            ? (tr ? 'okudum' : 'mark read')
+                            : (tr ? 'dinledim' : 'mark listened')}
+                    </em>
+                  </button>
+                );
+              })()
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-        <section className="card">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <span className="section-eyebrow">{tr ? 'Liderlik' : 'Leaderboard'}</span>
-              <h2 className="mt-2 font-display text-3xl font-semibold text-ink-700">Top XP</h2>
+      <section className="mot-v3-badges">
+        <div className="mot-v3-section-head">
+          <span>{tr ? 'Season badges' : 'Season badges'}</span>
+          <strong>{seasonCompleted}/{seasonTotal}</strong>
+        </div>
+        <div className="mot-v3-badge-grid">
+          {badgeRows.map((badge) => (
+            <div key={badge.id} className={badge.done ? 'is-unlocked' : ''}>
+              <span>{badge.done ? (tr ? 'açıldı' : 'unlocked') : badge.count}</span>
+              <strong>{badge.label}</strong>
+              <em>{badge.count}</em>
             </div>
-            <MedalIcon />
-          </div>
-          <div className="space-y-2">
-            {leaderboard.map((item, index) => (
-              <div
-                key={item.name}
-                className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${
-                  item.self ? 'bg-accent/10 text-accent-ink' : 'bg-white/70 text-ink-600'
-                }`}
-              >
-                <span className="text-sm font-semibold">{index + 1}. {item.name}</span>
-                <span className="text-xs font-bold">{item.xp} XP</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mot-v3-footerline">
+        <span><MedalIcon /> {level.current.title}</span>
+        <strong>{tr ? 'Bu odadaki her etkileşim leaderboard’a bağlanır.' : 'Every interaction in this room feeds the leaderboard.'}</strong>
+      </section>
     </div>
   );
 };

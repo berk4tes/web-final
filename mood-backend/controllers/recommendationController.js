@@ -361,16 +361,13 @@ const inferMoodLabelFromPrompt = (prompt = '') => {
 };
 
 exports.generateVibe = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
+  const prompt = String(req.body?.prompt ?? req.body?.moodText ?? req.body?.query ?? '').trim().slice(0, 500);
+  if (prompt.length < 3) {
     return res.status(422).json({
       success: false,
-      message: 'Validation failed',
-      errors: errors.array(),
+      message: 'Prompt must be at least 3 characters',
     });
   }
-
-  const { prompt } = req.body;
 
   let vibe;
   try {
@@ -385,21 +382,24 @@ exports.generateVibe = asyncHandler(async (req, res) => {
 
   const moodLabel = inferMoodLabelFromPrompt(prompt) || COLOR_TO_MOOD_LABEL[vibe.mood.colorKey] || 'calm';
   const intensityNumber = Math.max(1, Math.min(10, Math.round(vibe.mood.intensity * 10)));
+  const userId = req.user?._id;
 
-  const moodLog = await MoodLog.create({
-    userId: req.user._id,
-    moodLabel,
-    moodText: prompt,
-    intensity: intensityNumber,
-  });
+  const moodLog = userId
+    ? await MoodLog.create({
+        userId,
+        moodLabel,
+        moodText: prompt,
+        intensity: intensityNumber,
+      })
+    : null;
 
   const enrichList = async (items, contentType) =>
     Promise.all(
       (items || []).map(async (s) => {
         const meta = await enrichRecommendation(s.title, contentType, s.artist);
         return {
-          moodLogId: moodLog._id,
-          userId: req.user._id,
+          ...(moodLog?._id ? { moodLogId: moodLog._id } : {}),
+          ...(userId ? { userId } : {}),
           contentType,
           title: s.title,
           externalId: meta?.externalId || '',
@@ -432,11 +432,13 @@ exports.generateVibe = asyncHandler(async (req, res) => {
     return rest;
   };
 
-  await Recommendation.insertMany([
-    ...music.map(persistable),
-    ...movies.map(persistable),
-    ...books.map(persistable),
-  ]);
+  if (userId && moodLog?._id) {
+    await Recommendation.insertMany([
+      ...music.map(persistable),
+      ...movies.map(persistable),
+      ...books.map(persistable),
+    ]);
+  }
 
   return res.status(201).json({
     success: true,

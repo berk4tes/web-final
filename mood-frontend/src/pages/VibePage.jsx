@@ -8,11 +8,19 @@ import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferenc
 import useFavorites from '../hooks/useFavorites';
 import api from '../services/api';
 import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions } from '../utils/constants';
+import { readVibeListsSession, writeVibeListsSession } from '../utils/vibeSession';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
 const WATCHED_KEY = 'moodflix.watched';
 const READ_KEY = 'moodflix.readBooks';
-const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
+
+const hasAnyRecommendationList = (lists) => (
+  Array.isArray(lists?.movies) && lists.movies.length > 0
+) || (
+  Array.isArray(lists?.books) && lists.books.length > 0
+) || (
+  Array.isArray(lists?.music) && lists.music.length > 0
+);
 
 const REFINE_ACTIONS = [
   { id: 'lighter', labelKey: 'refineLighter', hint: 'similar to this, but lighter and softer' },
@@ -99,12 +107,8 @@ const VibePage = () => {
     if (id !== vibeIdRef.current) {
       vibeIdRef.current = id;
       let restored = null;
-      try {
-        restored = JSON.parse(localStorage.getItem(VIBE_LISTS_KEY) || 'null');
-      } catch {
-        restored = null;
-      }
-      if (restored?.id === id) {
+      restored = readVibeListsSession();
+      if (restored?.id === id && hasAnyRecommendationList(restored)) {
         setMovieList(filterAlreadyCollected(restored.movies || [], WATCHED_KEY));
         setBookList(filterAlreadyCollected(restored.books || [], READ_KEY));
         setMusicList(filterAlreadyCollected(restored.music || [], null, false));
@@ -118,14 +122,13 @@ const VibePage = () => {
 
   useEffect(() => {
     if (!vibeData || !vibeIdRef.current) return;
-    localStorage.setItem(
-      VIBE_LISTS_KEY,
-      JSON.stringify({
+    writeVibeListsSession(
+      {
         id: vibeIdRef.current,
         movies: movieList,
         books: bookList,
         music: musicList,
-      })
+      }
     );
   }, [vibeData, movieList, bookList, musicList]);
 
@@ -290,36 +293,39 @@ const VibePage = () => {
   }, []);
 
   const handleGenerate = async (overridePrompt, overrideIntensity) => {
-    const value = (overridePrompt ?? prompt).trim();
+    const value = String(overridePrompt ?? prompt).trim().slice(0, 500);
     if (value.length < 3) {
       toast.error('Write a few more words about your vibe');
       return;
     }
     setLoading(true);
     try {
-      const intensityLevel = overrideIntensity ?? intensity;
-      const intensityHint =
-        intensityLevel <= 3 ? ' (subtle, understated atmosphere)' :
-        intensityLevel >= 8 ? ' (intense, overwhelming atmosphere)' : '';
-      const preferenceHint = [
-        recPrefs.highMatchOnly ? 'prioritize only high-confidence matches' : '',
-        recPrefs.showNiche && !recPrefs.showPopular ? 'avoid obvious popular picks and choose niche recommendations' : '',
-        recPrefs.showPopular && !recPrefs.showNiche ? 'prioritize recognizable popular recommendations' : '',
-        ...REFINE_ACTIONS
-          .filter((action) => activeRefines.includes(action.id))
-          .map((action) => action.hint),
-      ].filter(Boolean).join('; ');
-      const finalPrompt = `${value}${intensityHint}${preferenceHint ? ` (${preferenceHint})` : ''}`;
-
-      const { data: res } = await api.post('/recommendations/vibe', { prompt: finalPrompt });
-      const data = { ...res.data, prompt: value };
+      const { data: res } = await api.post('/recommendations/vibe', { prompt: value });
+      const payload = res?.data || res;
+      if (!payload?.mood || !payload?.sections) {
+        throw new Error('Recommendation API returned an unexpected response');
+      }
+      const data = {
+        ...payload,
+        prompt: value,
+        sections: {
+          music: Array.isArray(payload.sections.music) ? payload.sections.music : [],
+          movies: Array.isArray(payload.sections.movies) ? payload.sections.movies : [],
+          books: Array.isArray(payload.sections.books) ? payload.sections.books : [],
+        },
+      };
       setVibe(data);
       setPrompt(value);
       setTimeout(() => {
         document.getElementById('vibe-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not interpret your vibe');
+      if (err.response?.status === 401) {
+        toast.error(err.response?.data?.message || 'Please sign in again');
+        return;
+      }
+      const validationDetail = err.response?.data?.errors?.[0]?.msg;
+      toast.error(validationDetail || err.response?.data?.message || err.message || 'Could not interpret your vibe');
     } finally {
       setLoading(false);
     }
@@ -522,13 +528,17 @@ const VibePage = () => {
             <p className="zero-subtitle">{heroDescription}</p>
 
             <form
-              onSubmit={(e) => { e.preventDefault(); handleGenerate(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleGenerate(new FormData(e.currentTarget).get('prompt'));
+              }}
               className="zero-command"
             >
               <span className="zero-command-spark" aria-hidden />
               <input
                 value={prompt}
                 onChange={(e) => handlePromptChange(e.target.value)}
+                name="prompt"
                 placeholder={prefs.language === 'tr' ? 'Gece sineması, neon yağmur, hafif kalp kırıklığı...' : 'Late-night cinema, neon rain, soft heartbreak...'}
                 maxLength={500}
                 className="zero-command-input"

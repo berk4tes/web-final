@@ -1,6 +1,7 @@
 // AuthContext — token + user state, login/logout actions, bootstrapped from localStorage
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api from '../services/api';
+import { clearVibeSession } from '../utils/vibeSession';
 
 const AuthContext = createContext(null);
 
@@ -17,6 +18,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setToken(null);
       localStorage.removeItem('token');
+      clearVibeSession();
     }
   }, []);
 
@@ -52,6 +54,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    clearVibeSession();
     setToken(null);
     setUser(null);
   }, []);

@@ -1,21 +1,12 @@
 import { createContext, useContext, useState } from 'react';
 import { getVibeColor } from '../utils/constants';
 import { inferMoodKeyFromText } from '../utils/moodKeywords';
-
-const CURRENT_VIBE_KEY = 'moodflix.currentVibe';
-const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
+import { clearVibeSession, readVibeSession, writeVibeSession } from '../utils/vibeSession';
 
 const MoodThemeContext = createContext(null);
 
 export const MoodThemeProvider = ({ children }) => {
-  const [vibeData, setVibeDataRaw] = useState(() => {
-    try {
-      const s = localStorage.getItem(CURRENT_VIBE_KEY);
-      return s ? JSON.parse(s) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [vibeData, setVibeDataRaw] = useState(readVibeSession);
   const [draftColorKey, setDraftColorKey] = useState(null);
 
   const colorKey = vibeData?.mood?.colorKey || draftColorKey;
@@ -25,10 +16,9 @@ export const MoodThemeProvider = ({ children }) => {
     setVibeDataRaw(data);
     if (data) setDraftColorKey(null);
     if (data) {
-      localStorage.setItem(CURRENT_VIBE_KEY, JSON.stringify(data));
+      writeVibeSession(data);
     } else {
-      localStorage.removeItem(CURRENT_VIBE_KEY);
-      localStorage.removeItem(VIBE_LISTS_KEY);
+      clearVibeSession();
     }
   };
 

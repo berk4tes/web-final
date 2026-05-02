@@ -31,15 +31,7 @@ router.post(
 
 router.post(
   '/vibe',
-  auth,
   recommendationLimiter,
-  [
-    body('prompt')
-      .isString()
-      .trim()
-      .isLength({ min: 3, max: 500 })
-      .withMessage('Prompt must be 3-500 characters'),
-  ],
   generateVibe
 );
 

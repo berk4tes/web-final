@@ -1,5 +1,6 @@
 // Axios instance with auth header injection and 401 handling
 import axios from 'axios';
+import { clearVibeSession } from '../utils/vibeSession';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
@@ -19,6 +20,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      clearVibeSession();
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
