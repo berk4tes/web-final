@@ -15,13 +15,14 @@ const NAV_ITEMS = [
   { to: '/vibe', key: 'navVibe' },
   { to: '/dashboard', key: 'navDashboard' },
   { to: '/motivation', key: 'navMotivation' },
-  { to: '/moodboard', label: 'Moodboard' },
+  { to: '/moodboard', key: 'navMoodboard' },
 ];
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, resetVibe, vibeData } = useMoodTheme();
-  const { t } = useUserPreferences();
+  const { prefs, t } = useUserPreferences();
+  const tr = prefs.language === 'tr';
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -101,7 +102,7 @@ const Navbar = () => {
 
         {/* Mobile hamburger */}
         <button
-          aria-label="Toggle menu"
+          aria-label={tr ? 'Menüyü aç/kapat' : 'Toggle menu'}
           className="nav-hamburger md:hidden"
           onClick={() => setOpen((v) => !v)}
         >

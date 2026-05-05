@@ -16,8 +16,8 @@ const REC_PREF_GROUPS = [
 ];
 
 const PROFILE_STATS = [
-  { label: 'Mood DNA', value: 'Cinematic' },
-  { label: 'Discovery mode', value: 'Curated' },
+  { label: { en: 'Mood DNA', tr: 'Mood DNA' }, value: { en: 'Cinematic', tr: 'Sinematik' } },
+  { label: { en: 'Discovery mode', tr: 'Keşif modu' }, value: { en: 'Curated', tr: 'Kürasyon' } },
 ];
 
 const compressAvatarFile = (file) => new Promise((resolve, reject) => {
@@ -55,6 +55,7 @@ const Toggle = ({ checked, onChange }) => (
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
   const { prefs, savePrefs, t } = useUserPreferences();
+  const tr = prefs.language === 'tr';
   const [form, setForm] = useState({ fullName: '', username: '', avatar: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -77,7 +78,7 @@ const ProfilePage = () => {
     ev.preventDefault();
     if (!user) return;
     if (form.username.trim().length < 3) {
-      toast.error('Username must be at least 3 characters');
+      toast.error(tr ? 'Kullanıcı adı en az 3 karakter olmalı' : 'Username must be at least 3 characters');
       return;
     }
     const avatar = form.avatar.trim();
@@ -86,13 +87,13 @@ const ProfilePage = () => {
         const url = new URL(avatar);
         if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid protocol');
       } catch {
-        toast.error('Avatar must be a valid image URL');
+        toast.error(tr ? 'Avatar geçerli bir görsel linki olmalı' : 'Avatar must be a valid image URL');
         setAvatarError(true);
         return;
       }
     }
     if (avatar.length > 120000) {
-      toast.error('Avatar image is too large. Try a smaller photo.');
+      toast.error(tr ? 'Avatar görseli çok büyük. Daha küçük bir fotoğraf dene.' : 'Avatar image is too large. Try a smaller photo.');
       setAvatarError(true);
       return;
     }
@@ -104,9 +105,9 @@ const ProfilePage = () => {
       });
       updateUser(data.data.user);
       savePrefs({ ...prefs, fullName: form.fullName.trim() });
-      toast.success('Profile updated');
+      toast.success(tr ? 'Profil güncellendi' : 'Profile updated');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not update');
+      toast.error(err.response?.data?.message || (tr ? 'Güncellenemedi' : 'Could not update'));
     } finally {
       setSavingProfile(false);
     }
@@ -117,28 +118,28 @@ const ProfilePage = () => {
     ev.target.value = '';
     if (!file) return;
     if (file.size > 6 * 1024 * 1024) {
-      toast.error('Choose an image under 6MB');
+      toast.error(tr ? '6MB altı bir görsel seç' : 'Choose an image under 6MB');
       return;
     }
     try {
       const avatar = await compressAvatarFile(file);
       if (avatar.length > 120000) {
-        toast.error('This photo is still too large after compression');
+        toast.error(tr ? 'Bu fotoğraf sıkıştırmadan sonra da büyük kaldı' : 'This photo is still too large after compression');
         return;
       }
       setAvatarError(false);
       setForm((current) => ({ ...current, avatar }));
     } catch (err) {
-      toast.error(err.message || 'Could not read this image');
+      toast.error(tr ? 'Bu görsel okunamadı' : (err.message || 'Could not read this image'));
       setAvatarError(true);
     }
   };
 
   const handlePasswordChange = async (ev) => {
     ev.preventDefault();
-    if (pwForm.next.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    if (pwForm.next !== pwForm.confirm) { toast.error('Passwords do not match'); return; }
-    toast('Password change requires backend support — coming soon.');
+    if (pwForm.next.length < 6) { toast.error(tr ? 'Şifre en az 6 karakter olmalı' : 'Password must be at least 6 characters'); return; }
+    if (pwForm.next !== pwForm.confirm) { toast.error(tr ? 'Şifreler eşleşmiyor' : 'Passwords do not match'); return; }
+    toast(tr ? 'Şifre değişimi için backend desteği yakında.' : 'Password change requires backend support - coming soon.');
     setShowPwChange(false);
     setPwForm({ current: '', next: '', confirm: '' });
   };
@@ -190,9 +191,9 @@ const ProfilePage = () => {
             </div>
             <div className="profile-stats-line">
               {PROFILE_STATS.map((stat) => (
-                <span key={stat.label}>
-                  <em>{stat.label}</em>
-                  <strong>{stat.value}</strong>
+                <span key={stat.label.en}>
+                  <em>{stat.label[prefs.language]}</em>
+                  <strong>{stat.value[prefs.language]}</strong>
                 </span>
               ))}
             </div>
@@ -201,10 +202,9 @@ const ProfilePage = () => {
           <div className="profile-title-area">
             <span>{t('account')}</span>
             <h2>{t('profileTitle')}</h2>
-            <p>{t('profileCaption')}</p>
           </div>
 
-          <div className="profile-symbol-controls" aria-label="Display controls">
+          <div className="profile-symbol-controls" aria-label={tr ? 'Görünüm kontrolleri' : 'Display controls'}>
             <div className="profile-symbol-group">
               <span>{t('language')}</span>
               <div>
@@ -283,42 +283,20 @@ const ProfilePage = () => {
                 onError={() => setAvatarError(true)}
               />
               <div>
-                <span>Avatar lab</span>
-                <h3>Make it feel like you.</h3>
-                <p>Upload a photo from your computer, choose a Luma face, or paste a direct image link.</p>
+                <span>{tr ? 'Avatar lab' : 'Avatar lab'}</span>
+                <h3>{tr ? 'Sana benzesin.' : 'Make it feel like you.'}</h3>
               </div>
             </div>
 
             <div className="profile-upload-row">
               <label className="profile-upload-drop">
                 <input type="file" accept="image/*" onChange={handleAvatarUpload} />
-                <strong>Upload photo</strong>
-                <span>JPG, PNG, WEBP under 6MB</span>
+                <strong>{tr ? 'Foto yükle' : 'Upload photo'}</strong>
+                <span>{tr ? 'JPG, PNG, WEBP - 6MB altı' : 'JPG, PNG, WEBP under 6MB'}</span>
               </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setAvatarError(false);
-                  setForm({ ...form, avatar: '' });
-                }}
-                className="profile-soft-button"
-              >
-                Use initials
-              </button>
             </div>
 
             <div className="profile-avatar-rail">
-              <button
-                type="button"
-                onClick={() => {
-                  setAvatarError(false);
-                  setForm({ ...form, avatar: '' });
-                }}
-                className={`profile-avatar-option profile-initial-option ${!form.avatar ? 'is-selected' : ''}`}
-                aria-label="Use initial avatar"
-              >
-                {initials}
-              </button>
               {AVATAR_PRESETS.map((preset) => {
                 const value = `preset:${preset.id}`;
                 const selected = form.avatar === value;
@@ -331,7 +309,7 @@ const ProfilePage = () => {
                       setForm({ ...form, avatar: value });
                     }}
                     className={`profile-avatar-option ${selected ? 'is-selected' : ''}`}
-                    aria-label={`Use ${preset.name} avatar`}
+                    aria-label={tr ? `${preset.name} avatarını kullan` : `Use ${preset.name} avatar`}
                   >
                     <UserAvatar value={value} name={preset.name} className="h-full w-full" />
                   </button>
@@ -339,23 +317,11 @@ const ProfilePage = () => {
               })}
             </div>
 
-            <label className="profile-url-line">
-              <span>{t('avatarUrl')}</span>
-              <input
-                value={form.avatar.startsWith('preset:') || form.avatar.startsWith('data:image/') ? '' : form.avatar}
-                onChange={(e) => {
-                  setAvatarError(false);
-                  setForm({ ...form, avatar: e.target.value });
-                }}
-                placeholder="https://..."
-                className="input"
-              />
-            </label>
-            <p className={`profile-avatar-help ${avatarError ? 'is-error' : ''}`}>
-              {avatarError
-                ? 'Bu görsel yüklenemedi. Başka bir fotoğraf ya da direkt görsel linki dene.'
-                : 'Uploaded photos are cropped and compressed before saving.'}
-            </p>
+            {avatarError && (
+              <p className="profile-avatar-help is-error">
+                {tr ? 'Bu görsel yüklenemedi. Başka bir fotoğraf dene.' : 'This image could not be loaded. Try another photo.'}
+              </p>
+            )}
           </div>
 
           <div className="profile-save-ribbon">
@@ -378,21 +344,21 @@ const ProfilePage = () => {
           <h4>{t('changePassword')}</h4>
           <input
             type="password"
-            placeholder="Current password"
+            placeholder={tr ? 'Mevcut şifre' : 'Current password'}
             value={pwForm.current}
             onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
             className="input"
           />
           <input
             type="password"
-            placeholder="New password (min 6 characters)"
+            placeholder={tr ? 'Yeni şifre (en az 6 karakter)' : 'New password (min 6 characters)'}
             value={pwForm.next}
             onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
             className="input"
           />
           <input
             type="password"
-            placeholder="Confirm new password"
+            placeholder={tr ? 'Yeni şifreyi onayla' : 'Confirm new password'}
             value={pwForm.confirm}
             onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
             className="input"
@@ -403,9 +369,8 @@ const ProfilePage = () => {
 
       <section className="profile-discovery-stream">
         <div className="profile-discovery-head">
-          <span>Discovery console</span>
+          <span>{tr ? 'Keşif konsolu' : 'Discovery console'}</span>
           <h2>{t('recommendationPrefs')}</h2>
-          <p>{t('recommendationPrefsBody')}</p>
         </div>
 
         <div className="profile-pref-lanes">
@@ -419,10 +384,6 @@ const ProfilePage = () => {
             </div>
           ))}
         </div>
-
-        <p className="profile-pref-note">
-          {t('prefsStored')}
-        </p>
       </section>
     </div>
   );

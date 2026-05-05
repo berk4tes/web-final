@@ -28,7 +28,9 @@ const normalizePrefs = (stored = {}) => ({
   recPrefs: { ...REC_PREFS_DEFAULTS, ...(stored.recPrefs || {}) },
 });
 
-const readPrefs = (userId) => normalizePrefs(readUserScopedJson(PREFS_KEY, userId, {}));
+const readPrefs = (userId) => (
+  userId ? normalizePrefs(readUserScopedJson(PREFS_KEY, userId, {})) : normalizePrefs({})
+);
 
 const UserPreferencesContext = createContext(null);
 

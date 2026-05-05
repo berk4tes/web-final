@@ -31,6 +31,81 @@ const REFINE_ACTIONS = [
   { id: 'niche', labelKey: 'refineNiche', hint: 'more niche and less obvious' },
 ];
 
+const HeartIcon = ({ filled = false }) => (
+  <svg viewBox="0 0 24 24" aria-hidden>
+    <path
+      d="M20.8 5.7c-1.8-2-4.8-2.1-6.8-.2L12 7.4 10 5.5c-2-1.9-5-1.8-6.8.2-1.9 2.1-1.7 5.4.4 7.3l7.5 7c.5.5 1.3.5 1.8 0l7.5-7c2.1-1.9 2.3-5.2.4-7.3Z"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const BookmarkIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden>
+    <path d="M6.5 4.5h11v15L12 16.2l-5.5 3.3v-15Z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+  </svg>
+);
+
+const GlassesIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden>
+    <path d="M3.5 13.2c.2-2.2 1.4-3.7 3.6-3.7 2.4 0 3.8 1.6 4 3.9M12.9 13.4c.2-2.3 1.6-3.9 4-3.9 2.2 0 3.4 1.5 3.6 3.7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M11.1 13.4h1.8M3.5 13.2c0 2.2 1.6 4 3.8 4s3.8-1.6 3.8-3.8M12.9 13.4c0 2.2 1.6 3.8 3.8 3.8s3.8-1.8 3.8-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+const WheelEmptyState = ({ language, suggestions, loading, onPick }) => {
+  const tr = language === 'tr';
+  const wheelItems = [...new Set([...suggestions, ...VIBE_PROMPT_EXAMPLES])].slice(0, 6);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const selected = wheelItems[selectedIndex] || wheelItems[0];
+
+  const spin = () => {
+    if (spinning || loading || !wheelItems.length) return;
+    const nextIndex = Math.floor(Math.random() * wheelItems.length);
+    setSpinning(true);
+    setSelectedIndex(nextIndex);
+    window.setTimeout(() => {
+      setSpinning(false);
+      onPick(wheelItems[nextIndex]);
+    }, 950);
+  };
+
+  return (
+    <section className="zero-empty zero-vibe-wheel">
+      <div className="vibe-wheel-stage">
+        <div className="vibe-wheel-pointer" aria-hidden />
+        <button
+          type="button"
+          className={`vibe-wheel ${spinning ? 'is-spinning' : ''}`}
+          onClick={spin}
+          disabled={spinning || loading}
+          aria-label={tr ? 'Vibe çarkını çevir' : 'Spin the vibe wheel'}
+        >
+          {wheelItems.map((item, index) => (
+            <span key={item} style={{ '--slice': index }}>
+              <em title={item}>{index + 1}</em>
+            </span>
+          ))}
+          <strong>{tr ? 'Çevir' : 'Spin'}</strong>
+        </button>
+      </div>
+      <div className="vibe-wheel-copy">
+        <span>{tr ? 'Vibe çarkı' : 'Vibe wheel'}</span>
+        <h2>{tr ? 'Kararsızsan çevir.' : 'Spin if you are stuck.'}</h2>
+        <p>{selected}</p>
+        <button type="button" onClick={spin} disabled={spinning || loading}>
+          {spinning ? (tr ? 'Dönüyor...' : 'Spinning...') : (tr ? 'Çarkı çevir' : 'Spin the wheel')}
+        </button>
+      </div>
+    </section>
+  );
+};
+
 const VibePage = () => {
   const location = useLocation();
   const { user } = useAuth();
@@ -67,6 +142,7 @@ const VibePage = () => {
   const intensityTimerRef = useRef(null);
   const generateRef = useRef(null);
   const projectionDetailKeyRef = useRef(null);
+  const cinemaTracklistRef = useRef(null);
   const recPrefs = { ...REC_PREFS_DEFAULTS, ...(prefs.recPrefs || {}) };
 
   const getItemId = (item) => item?.externalId || item?._id || item?.title;
@@ -161,9 +237,11 @@ const VibePage = () => {
     visibleMovies.length === 2 ? [0, 1] :
     visibleMovies.length === 1 ? [0] : [];
   const cinemaCarouselMovies = carouselOffsets.map((offset) => {
-    const index = (activeMovieIndex + offset + visibleMovies.length) % visibleMovies.length;
-    return { movie: visibleMovies[index], offset };
-  });
+    const index = activeMovieIndex + offset;
+    return index >= 0 && index < visibleMovies.length
+      ? { movie: visibleMovies[index], offset }
+      : null;
+  }).filter(Boolean);
   const activeMusic = visibleMusic.find((item) => getItemId(item) === activeMusicId) || visibleMusic[0];
   const activeBook = visibleBooks.find((item) => getItemId(item) === activeBookId) || visibleBooks[0];
   const activeBookCover = activeBook?.poster ||
@@ -176,10 +254,10 @@ const VibePage = () => {
       ? { id: 'music', label: prefs.language === 'tr' ? 'Müzik' : 'Music', kicker: 'soundtrack' }
       : null,
     (recPrefs.showMovies || recPrefs.showSeries) && visibleMovies.length > 0
-      ? { id: 'cinema', label: prefs.language === 'tr' ? 'Film / Dizi' : 'Film / Series', kicker: 'spotlight' }
+      ? { id: 'cinema', label: prefs.language === 'tr' ? 'Film / Dizi' : 'Film / Series', kicker: prefs.language === 'tr' ? 'spot ışığı' : 'spotlight' }
       : null,
     recPrefs.showBooks && visibleBooks.length > 0
-      ? { id: 'books', label: prefs.language === 'tr' ? 'Kitaplar' : 'Books', kicker: 'storybook' }
+      ? { id: 'books', label: prefs.language === 'tr' ? 'Kitaplar' : 'Books', kicker: prefs.language === 'tr' ? 'kitaplık' : 'storybook' }
       : null,
   ].filter(Boolean);
   const selectedScene = availableScenes.some((scene) => scene.id === activeScene)
@@ -228,6 +306,12 @@ const VibePage = () => {
       setActiveScene(availableScenes[0].id);
     }
   }, [availableScenes, activeScene]);
+
+  useEffect(() => {
+    if (selectedScene !== 'cinema') return;
+    if (!cinemaTracklistRef.current) return;
+    cinemaTracklistRef.current.scrollTo({ left: 0, behavior: 'auto' });
+  }, [selectedScene, visibleMovies.length]);
 
   useEffect(() => {
     if (!movieDetail?.title) return;
@@ -490,8 +574,8 @@ const VibePage = () => {
   const hasProjectionMetadata = projectedDirectors.length || projectedCast.length || projectedProviders.length || projectedProviderLogos.length;
   const moodTitle = vibeData?.mood?.title || (prefs.language === 'tr' ? 'bu ruh hali' : 'this mood');
   const heroHeadline = prefs.language === 'tr'
-    ? 'Moodunu yaz.'
-    : 'Set the mood.';
+    ? 'Vibeını yakala.'
+    : 'Catch the vibe.';
   const musicSceneTitle = prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`;
   const cinemaSceneTitle = prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`;
   const booksSceneTitle = prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`;
@@ -527,7 +611,7 @@ const VibePage = () => {
                 value={prompt}
                 onChange={(e) => handlePromptChange(e.target.value)}
                 name="prompt"
-                placeholder={prefs.language === 'tr' ? 'Gece sineması, neon yağmur, hafif kalp kırıklığı...' : 'Late-night cinema, neon rain, soft heartbreak...'}
+                placeholder={prefs.language === 'tr' ? 'Neon yağmur, kampüs crush, gece kahvesi...' : 'Neon rain, campus crush, late coffee...'}
                 maxLength={500}
                 className="zero-command-input"
                 autoFocus
@@ -615,9 +699,15 @@ const VibePage = () => {
         {loading && <LoadingVibeState message={t('loadingVibe')} />}
 
         {!loading && !vibeData && (
-          <section className="zero-empty">
-            <h2>{t('emptyTitle')}</h2>
-          </section>
+          <WheelEmptyState
+            language={prefs.language}
+            suggestions={promptSuggestions}
+            loading={loading}
+            onPick={(value) => {
+              setPrompt(value);
+              handleGenerate(value);
+            }}
+          />
         )}
 
         {vibeData && !loading && (
@@ -702,7 +792,12 @@ const VibePage = () => {
                       <div>
                         <a href={getMusicSearch(activeMusic, 'spotify')} target="_blank" rel="noreferrer">Spotify</a>
                         <a href={getMusicSearch(activeMusic, 'apple')} target="_blank" rel="noreferrer">Apple Music</a>
-                        <button type="button" className="action-favorite" onClick={() => activeMusic && handleToggleFavoriteAndHide(activeMusic, 'music')}>
+                        <button
+                          type="button"
+                          className={`music-heart-button ${isFavorite(getItemId(activeMusic)) ? 'is-loved' : ''}`}
+                          onClick={() => activeMusic && handleToggleFavoriteAndHide(activeMusic, 'music')}
+                        >
+                          <HeartIcon filled={isFavorite(getItemId(activeMusic))} />
                           {isFavorite(getItemId(activeMusic)) ? t('inFavorites') : t('addFavorite')}
                         </button>
                       </div>
@@ -764,7 +859,7 @@ const VibePage = () => {
                 {/* 3-col stage: tracklist | poster+ticket | info */}
                 <div className="cinema-stage">
                   {/* Left: numbered tracklist */}
-                  <div className="cinema-tracklist">
+                  <div className="cinema-tracklist" ref={cinemaTracklistRef}>
                     {visibleMovies.map((movie, index) => {
                       const active = getItemId(movie) === getItemId(activeMovie);
                       return (
@@ -801,26 +896,19 @@ const VibePage = () => {
                         );
                       })}
                     </div>
-                    <button
-                      type="button"
-                      className="cinema-screen"
-                      onClick={() => activeMovie && setMovieDetail(activeMovie)}
-                    >
+                    <div className="cinema-screen" aria-hidden>
                       {activeMovie?.poster
                         ? <img src={activeMovie.poster} alt={activeMovie.title || ''} />
                         : <div className="cinema-screen-empty" />}
-                      <span className="cinema-screen-enter">
-                        {prefs.language === 'tr' ? 'Sahneye gir' : 'Enter scene'}
-                      </span>
-                    </button>
+                    </div>
 
                     <div className="cinema-ticket">
                       <div className="cinema-ticket-stub">
-                        <span>admit</span>
-                        <strong>one</strong>
+                        <span>{prefs.language === 'tr' ? 'giriş' : 'admit'}</span>
+                        <strong>{prefs.language === 'tr' ? 'bir' : 'one'}</strong>
                       </div>
                       <div className="cinema-ticket-body">
-                        <span>now showing</span>
+                        <span>{prefs.language === 'tr' ? 'şimdi sahnede' : 'now showing'}</span>
                         <strong>{activeMovie?.title}</strong>
                         {activeMovie?.genre && <em>{activeMovie.genre}</em>}
                       </div>
@@ -831,18 +919,6 @@ const VibePage = () => {
                     </div>
                   </div>
 
-                  {/* Right: compact info. The full action/details card opens below. */}
-                  <div className="cinema-info">
-                    <span className="cinema-info-eyebrow">
-                      spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {visibleMovies.length}
-                    </span>
-                    <h3 className="cinema-info-title">{activeMovie?.title}</h3>
-                    {activeMovie?.genre && <p className="cinema-info-genre">{activeMovie.genre}</p>}
-                    <p className="cinema-info-desc">{activeMovie?.aiExplanation || activeMovie?.overview}</p>
-                    <small className="cinema-info-hint">
-                      {prefs.language === 'tr' ? 'Detay kartı aşağıda açılır.' : 'Details open below.'}
-                    </small>
-                  </div>
                 </div>
 
                 {projectedMovie && (
@@ -920,8 +996,19 @@ const VibePage = () => {
                         <div className="cinema-projection-links">
                           <a href={getMovieSearch(projectedMovie, 'imdb')} target="_blank" rel="noreferrer">IMDb</a>
                           <a href={getMovieSearch(projectedMovie, 'letterboxd')} target="_blank" rel="noreferrer">Letterboxd</a>
-                          <button type="button" className="action-favorite" onClick={() => handleToggleFavoriteAndHide(projectedMovie, projectedMovie.contentType === 'series' ? 'series' : 'movie')}>
-                            {isFavorite(getItemId(projectedMovie)) ? t('inFavorites') : t('addFavorite')}
+                          <a href={getMovieSearch(projectedMovie, 'trailer')} target="_blank" rel="noreferrer">
+                            {prefs.language === 'tr' ? 'Fragman' : 'Trailer'}
+                          </a>
+                          <button
+                            type="button"
+                            className="action-watched"
+                            onClick={() => {
+                              dismissMovie(projectedMovie);
+                              setMovieDetail(null);
+                            }}
+                          >
+                            <BookmarkIcon />
+                            {prefs.language === 'tr' ? 'İzledim' : 'Watched'}
                           </button>
                         </div>
                       </div>
@@ -966,12 +1053,13 @@ const VibePage = () => {
                     <div className="library-lamp-glow" aria-hidden />
                     <div className="storybook-spread">
                       <div className="storybook-page storybook-page-main">
-                        <span>{`chapter ${String(activeBookIndex + 1).padStart(2, '0')}`}</span>
+                        <span>{`${prefs.language === 'tr' ? 'bölüm' : 'chapter'} ${String(activeBookIndex + 1).padStart(2, '0')}`}</span>
                         <strong>{activeBook?.title}</strong>
                         <p>{activeBook?.aiExplanation || activeBook?.overview || t('readCaption')}</p>
                         <div className="storybook-actions">
-                          <button type="button" className="action-favorite" onClick={() => activeBook && handleToggleFavoriteAndHide(activeBook, 'book')}>
-                            {isFavorite(getItemId(activeBook)) ? t('inFavorites') : t('saveToLibrary')}
+                          <button type="button" className="action-read" onClick={() => activeBook && dismissBook(activeBook)}>
+                            <GlassesIcon />
+                            {prefs.language === 'tr' ? 'Okudum' : 'Read'}
                           </button>
                           <a className="action-detail" href={getGoodreadsSearch(activeBook)} target="_blank" rel="noreferrer">
                             Goodreads
@@ -1016,7 +1104,8 @@ const VibePage = () => {
                       })}
                     </div>
                     <div className="library-info-actions">
-                      <button type="button" className="action-bookmark" onClick={() => activeBook && dismissBook(activeBook)}>
+                      <button type="button" className="action-read" onClick={() => activeBook && dismissBook(activeBook)}>
+                        <GlassesIcon />
                         {prefs.language === 'tr' ? 'Okudum' : 'Read'}
                       </button>
                     </div>

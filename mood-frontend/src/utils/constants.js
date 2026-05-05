@@ -90,7 +90,7 @@ export const VIBE_COLORS = {
 };
 
 export const VIBE_PROMPT_EXAMPLES = [
-  'Feels like Gilmore Girls in autumn',
+  'Autumn coffee and old notebooks',
   'Sad but peaceful late-night drive',
   'Dark feminine gym energy',
   'A sunlit Sunday in a Parisian café',
@@ -113,7 +113,7 @@ export const MOOD_PROMPT_SUGGESTIONS = {
     'Standing alone at the ocean\'s edge',
   ],
   nostalgic: [
-    'Feels like Gilmore Girls in autumn',
+    'Autumn coffee and old notebooks',
     'Dusty photographs from childhood summers',
     'The smell of your grandparents\' kitchen',
     'Polaroids from a summer you can\'t forget',

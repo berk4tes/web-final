@@ -13,16 +13,45 @@ const RECENT_MOODS_KEY = 'moodflix.recentMoods';
 const WATCHED_KEY = 'moodflix.watched';
 const READ_KEY = 'moodflix.readBooks';
 
-const moodLabel = (mood) => ({
-  happy: 'Sunlit',
-  sad: 'Melancholic',
-  excited: 'Electric',
-  calm: 'Calm',
-  angry: 'Intense',
-  nostalgic: 'Nostalgic',
-  tired: 'Tired',
-  dreamy: 'Dreamy',
-}[mood] || mood || 'Calm');
+const AnimatedNumber = ({ value, duration = 900 }) => {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    const target = Number(value) || 0;
+    if (target === 0) {
+      setDisplay(0);
+      return undefined;
+    }
+    let frame = null;
+    const startedAt = performance.now();
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.max(1, Math.round(target * eased)));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [duration, value]);
+
+  return display;
+};
+
+const moodLabel = (mood, language = 'en') => {
+  const labels = {
+    happy: { en: 'Sunlit', tr: 'Güneşli' },
+    sad: { en: 'Melancholic', tr: 'Melankolik' },
+    excited: { en: 'Electric', tr: 'Elektrik' },
+    calm: { en: 'Calm', tr: 'Sakin' },
+    angry: { en: 'Intense', tr: 'Yoğun' },
+    nostalgic: { en: 'Nostalgic', tr: 'Nostaljik' },
+    tired: { en: 'Tired', tr: 'Yorgun' },
+    dreamy: { en: 'Dreamy', tr: 'Dalgın' },
+  };
+  return labels[mood]?.[language] || mood || (language === 'tr' ? 'Sakin' : 'Calm');
+};
 
 const moodFromColorKey = (colorKey) => ({
   dreamy: 'dreamy',
@@ -143,9 +172,9 @@ const DashboardCalendar = ({ history, savedVibes, language }) => {
       });
     });
 
-    return Array.from({ length: 35 }).map((_, index) => {
+    return Array.from({ length: 30 }).map((_, index) => {
       const date = new Date(today);
-      date.setDate(today.getDate() - (34 - index));
+      date.setDate(today.getDate() - (29 - index));
       const key = localDateKey(date);
       return { key, date, entry: byDay.get(key) };
     });
@@ -154,8 +183,8 @@ const DashboardCalendar = ({ history, savedVibes, language }) => {
   return (
     <section className="dash-panel dash-calendar">
       <div className="dash-section-head">
-        <span>Mood calendar</span>
-        <strong>35 days</strong>
+        <span>{language === 'tr' ? 'Mood takvimi' : 'Mood calendar'}</span>
+        <strong>{language === 'tr' ? '30 gün' : '30 days'}</strong>
       </div>
       <div className="dash-calendar-grid">
         {days.map(({ key, date, entry }) => {
@@ -164,7 +193,7 @@ const DashboardCalendar = ({ history, savedVibes, language }) => {
             <div
               key={key}
               className={`dash-calendar-day ${entry ? 'is-filled' : ''}`}
-              title={entry ? `${moodLabel(entry.moodLabel)} - ${entry.moodText}` : key}
+              title={entry ? `${moodLabel(entry.moodLabel, language)} - ${entry.moodText}` : key}
               style={entry ? {
                 '--day-accent': color.accent,
                 '--day-soft': color.soft,
@@ -180,7 +209,7 @@ const DashboardCalendar = ({ history, savedVibes, language }) => {
   );
 };
 
-const YourMoods = ({ moodCounts, totalSignals, language }) => {
+const YourMoods = ({ moodCounts, language }) => {
   const tr = language === 'tr';
   const visible = moodCounts.length ? moodCounts.slice(0, 5) : [['calm', 1], ['dreamy', 1], ['nostalgic', 1]];
   const max = Math.max(...visible.map(([, count]) => count), 1);
@@ -192,7 +221,6 @@ const YourMoods = ({ moodCounts, totalSignals, language }) => {
     <section className="dash-panel dash-moods">
       <div className="dash-section-head">
         <span>{tr ? 'Mood haritan' : 'Your moods'}</span>
-        <strong>{totalSignals} signals</strong>
       </div>
       <div
         className="dash-mood-composition"
@@ -203,9 +231,8 @@ const YourMoods = ({ moodCounts, totalSignals, language }) => {
         }}
       >
         <div className="dash-dominant-mood">
-          <span>{tr ? 'dominant mood' : 'dominant mood'}</span>
-          <strong>{moodLabel(dominantKey)}</strong>
-          <em>{dominantCount} / {totalSignals || dominantCount}</em>
+          <span>{tr ? 'baskın mood' : 'dominant mood'}</span>
+          <strong>{moodLabel(dominantKey, language)}</strong>
         </div>
 
         <div className="dash-mood-constellation" aria-hidden>
@@ -232,7 +259,7 @@ const YourMoods = ({ moodCounts, totalSignals, language }) => {
             const color = getVibeColor(key);
             return (
               <div key={key} className="dash-mood-spectrum-row">
-                <span>{moodLabel(key)}</span>
+                <span>{moodLabel(key, language)}</span>
                 <div>
                   <i
                     style={{
@@ -256,21 +283,21 @@ const RecentMoods = ({ savedVibes, recentMoods, history, onReplay, language }) =
   const timeline = [
     ...recentMoods.slice(0, 5).map((entry) => ({
       id: `recent-${entry.id}`,
-      title: entry.mood?.title || moodLabel(entry.mood?.colorKey),
+      title: entry.mood?.title || moodLabel(entry.mood?.colorKey, language),
       prompt: entry.prompt,
       moodKey: moodFromColorKey(entry.mood?.colorKey),
       date: entry.savedAt,
     })),
     ...history.slice(0, 5).map((entry) => ({
       id: entry.id,
-      title: moodLabel(entry.moodLabel),
+      title: moodLabel(entry.moodLabel, language),
       prompt: entry.moodText,
       moodKey: moodFromColorKey(entry.moodLabel),
       date: entry.loggedAt,
     })),
     ...savedVibes.slice(0, 5).map((vibe) => ({
       id: `saved-${vibe.id}`,
-      title: vibe.mood?.title || moodLabel(vibe.mood?.colorKey),
+      title: vibe.mood?.title || moodLabel(vibe.mood?.colorKey, language),
       prompt: vibe.prompt,
       moodKey: moodFromColorKey(vibe.mood?.colorKey),
       date: vibe.savedAt,
@@ -280,7 +307,7 @@ const RecentMoods = ({ savedVibes, recentMoods, history, onReplay, language }) =
   return (
     <section className="dash-recent">
       <div className="dash-section-head">
-        <span>{tr ? 'Recent moodlar' : 'Recent moods'}</span>
+        <span>{tr ? 'Son moodlar' : 'Recent moods'}</span>
         <strong>{timeline.length}</strong>
       </div>
       {timeline.length === 0 ? (
@@ -312,53 +339,41 @@ const RecentMoods = ({ savedVibes, recentMoods, history, onReplay, language }) =
   );
 };
 
-const TasteAndSearches = ({ savedVibes, history, favoriteMusic, watchedMedia, readBooks, onReplay, language }) => {
+const SavedVibesPanel = ({ savedVibes, onReplay, language }) => {
   const tr = language === 'tr';
-  const totals = [
-    { id: 'music', label: tr ? 'Müzik favorileri' : 'Music favorites', value: favoriteMusic.length },
-    { id: 'watch', label: tr ? 'İzlenen film/dizi' : 'Watched film/series', value: watchedMedia.length },
-    { id: 'read', label: tr ? 'Okunan kitap' : 'Read books', value: readBooks.length },
-    { id: 'vibes', label: tr ? 'Kaydedilen mood' : 'Saved moods', value: savedVibes.length },
-  ];
-  const max = Math.max(...totals.map((item) => item.value), 1);
-  const suggested = savedVibes[0]?.prompt || history[0]?.moodText || '';
+  const items = savedVibes.slice(0, 8);
 
   return (
-    <section className="dash-panel dash-taste">
-      <div className="dash-section-head">
-        <span>{tr ? 'Taste profile + recent searches' : 'Taste profile + recent searches'}</span>
-        <strong>{tr ? 'sinyal' : 'signal'}</strong>
-      </div>
-      <div className="dash-taste-layout">
-        <div className="dash-bars">
-          {totals.map((item) => (
-            <div key={item.id} className="dash-bar-row">
-              <span>{item.label}</span>
-              <div>
-                <i style={{ width: `${Math.max(10, (item.value / max) * 100)}%` }} />
-              </div>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
+    <section className="dash-saved-vibes">
+      <div className="dash-collections-head">
+        <div>
+          <span>{tr ? 'Saved vibes' : 'Saved vibes'}</span>
+          <h2>{tr ? 'Kaydettiğin atmosferler.' : 'Atmospheres you kept.'}</h2>
         </div>
-        <div className="dash-search-stack">
-          {(history.length ? history : savedVibes.map((vibe) => ({ moodText: vibe.prompt, loggedAt: vibe.savedAt }))).slice(0, 4).map((entry, index) => (
-            <button
-              key={`${entry.moodText}-${index}`}
-              type="button"
-              onClick={() => entry.moodText && onReplay({ prompt: entry.moodText })}
-            >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <strong>{entry.moodText || (tr ? 'Kayıtlı mood' : 'Saved mood')}</strong>
-            </button>
-          ))}
-          {suggested && (
-            <button type="button" className="dash-taste-replay" onClick={() => onReplay({ prompt: suggested })}>
-              {tr ? 'Benzer keşfet' : 'Explore similar'}
-            </button>
-          )}
-        </div>
+        <Link to="/vibe">{tr ? 'Yeni vibe' : 'New vibe'}</Link>
       </div>
+      {items.length === 0 ? (
+        <div className="dash-empty-line">{tr ? 'Henüz saved vibe yok.' : 'No saved vibes yet.'}</div>
+      ) : (
+        <div className="dash-saved-vibe-grid">
+          {items.map((vibe, index) => {
+            const key = moodFromColorKey(vibe.mood?.colorKey);
+            const color = getVibeColor(key);
+            return (
+              <button
+                key={vibe.id || `${vibe.prompt}-${index}`}
+                type="button"
+                onClick={() => onReplay(vibe)}
+                style={{ '--saved-accent': color.accent, '--saved-soft': color.soft, '--saved-ink': color.ink }}
+              >
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <strong>{vibe.mood?.title || moodLabel(key, language)}</strong>
+                <em>{vibe.prompt}</em>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 };
@@ -392,7 +407,7 @@ const CollectionTile = ({ item, type, onRemove, language }) => {
         )}
       </div>
       <div className="dash-collection-copy">
-        <span>{type === 'music' ? 'favorite music' : type === 'read' ? 'read book' : 'watched'}</span>
+        <span>{type === 'music' ? (tr ? 'favori müzik' : 'favorite music') : type === 'read' ? (tr ? 'okunan kitap' : 'read book') : (tr ? 'izlenen' : 'watched')}</span>
         <h3>{item.title}</h3>
         <p>{formatDate(date, language) || (tr ? 'koleksiyonda' : 'in collection')}</p>
       </div>
@@ -417,14 +432,14 @@ const Collections = ({ favoriteMusic, watchedMedia, readBooks, onRemoveFavorite,
       remove: onRemoveFavorite,
     },
     watched: {
-      label: tr ? 'Watched' : 'Watched',
+      label: tr ? 'İzlenenler' : 'Watched',
       count: watchedMedia.length,
       items: watchedMedia,
       empty: tr ? 'Film ve diziler burada olacak.' : 'Movies and series you watched live here.',
       remove: onRemoveWatched,
     },
     read: {
-      label: tr ? 'Read books' : 'Read books',
+      label: tr ? 'Okunanlar' : 'Read books',
       count: readBooks.length,
       items: readBooks,
       empty: tr ? 'Okuduğun kitaplar ayrı tutulacak.' : 'Books you read are kept separate.',
@@ -575,28 +590,34 @@ const DashboardPage = () => {
         <div className="dash-hero-copy">
           <span>{t('navDashboard')}</span>
           <h1 className="text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{tr ? 'Mood arşivin, daha keskin bir sinyal gibi.' : 'Your mood archive, tuned like a signal.'}</h1>
-          <p>{tr ? 'Son moodların ve koleksiyonların daha sakin bir düzende.' : 'Recent moods and collections, neatly sorted.'}</p>
         </div>
         <div className="dash-hero-metrics">
           <div>
             <span>{tr ? 'Seri' : 'Streak'}</span>
-            <strong>{streak}</strong>
+            <strong><AnimatedNumber value={streak} /></strong>
             <em>{tr ? 'gün' : 'days'}</em>
           </div>
           <div>
             <span>{tr ? 'Sinyal' : 'Signals'}</span>
-            <strong>{totalSignals}</strong>
-            <em>{moodLabel(topMood)}</em>
+            <strong><AnimatedNumber value={totalSignals} /></strong>
+            <em>{tr ? 'canlı sayaç' : 'live count'}</em>
+          </div>
+          <div>
+            <span>{tr ? 'Vibe' : 'Vibes'}</span>
+            <strong><AnimatedNumber value={savedVibes.length} /></strong>
+            <em>{tr ? 'kayıtlı' : 'saved'}</em>
           </div>
         </div>
       </section>
 
       <section className="dash-topology">
-        <YourMoods moodCounts={moodCounts} totalSignals={totalSignals} language={language} />
+        <YourMoods moodCounts={moodCounts} language={language} />
         <DashboardCalendar history={moodHistory} savedVibes={savedVibes} language={language} />
       </section>
 
       <RecentMoods savedVibes={savedVibes} recentMoods={recentMoods} history={moodHistory} onReplay={handleReplay} language={language} />
+
+      <SavedVibesPanel savedVibes={savedVibes} onReplay={handleReplay} language={language} />
 
       <Collections
         favoriteMusic={favoriteMusic}
@@ -608,15 +629,6 @@ const DashboardPage = () => {
         language={language}
       />
 
-      <TasteAndSearches
-        savedVibes={savedVibes}
-        history={moodHistory}
-        favoriteMusic={favoriteMusic}
-        watchedMedia={watchedMedia}
-        readBooks={readBooks}
-        onReplay={handleReplay}
-        language={language}
-      />
     </div>
   );
 };

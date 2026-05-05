@@ -154,7 +154,7 @@ const AuthExperience = ({ mode }) => {
     } catch (err) {
       const fallback = isRegister
         ? (tr ? 'Kayıt tamamlanamadı' : 'Registration failed')
-        : (err.request ? 'Cannot reach server — is the backend running?' : (tr ? 'E-posta veya şifre hatalı' : 'Invalid email or password'));
+        : (err.request ? (tr ? 'Sunucuya ulaşılamıyor. Backend çalışıyor mu?' : 'Cannot reach server - is the backend running?') : (tr ? 'E-posta veya şifre hatalı' : 'Invalid email or password'));
       toast.error(err.response?.data?.message || fallback);
     } finally {
       setSubmitting(false);

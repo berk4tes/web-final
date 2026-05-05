@@ -38,7 +38,7 @@ const DAILY_TASKS = [
     id: 'seasonalListen',
     xp: 60,
     label: { en: 'Listen to one seasonal track', tr: 'Bir sezon şarkısı dinle' },
-    hint: { en: 'Done when you mark a Spring track listened.', tr: 'Spring şarkısını dinledim deyince tamamlanır.' },
+    hint: { en: 'Done when you mark a Spring track listened.', tr: 'Sezon şarkısını dinledim deyince tamamlanır.' },
   },
   {
     id: 'seasonalRead',
@@ -70,9 +70,9 @@ const REVIEW_EMOTIONS = [
 
 const SEASON_ROOMS = {
   spring: {
-    title: { en: 'Spring Rewatch Room', tr: 'Spring Rewatch Odası' },
+    title: { en: 'Spring Rewatch Room', tr: 'İlkbahar Rewatch Odası' },
     subtitle: { en: 'First warm nights, soft rain, fresh-start stories.', tr: 'İlk sıcak akşamlar, hafif yağmur, yeni başlangıç hikayeleri.' },
-    cue: { en: 'Now open: spring rewatches', tr: 'Şimdi açık: spring rewatch' },
+    cue: { en: 'Now open: spring rewatches', tr: 'Şimdi açık: ilkbahar rewatch' },
     shelves: {
       movies: ['Before Sunrise', 'Pride & Prejudice', 'Little Women', 'Past Lives', 'Notting Hill', 'Emma', 'Frances Ha', 'The Half of It', 'Gilmore Girls', 'Anne with an E', 'Heartstopper', 'Daisy Jones & The Six'],
       reads: ['The Secret Garden', 'Normal People', 'A Room with a View', 'Anne of Green Gables', 'Emma', 'Writers & Lovers', 'Book Lovers', 'I Capture the Castle', 'The Enchanted April', 'Persuasion', 'The Blue Castle', 'Convenience Store Woman'],
@@ -80,9 +80,9 @@ const SEASON_ROOMS = {
     },
   },
   summer: {
-    title: { en: 'Summer Night Room', tr: 'Summer Night Odası' },
+    title: { en: 'Summer Night Room', tr: 'Yaz Gecesi Odası' },
     subtitle: { en: 'Late drives, open windows, high-glow discoveries.', tr: 'Gece yolları, açık camlar, parlak keşifler.' },
-    cue: { en: 'Now open: summer heat picks', tr: 'Şimdi açık: summer heat seçimleri' },
+    cue: { en: 'Now open: summer heat picks', tr: 'Şimdi açık: yaz sıcaklığı seçimleri' },
     shelves: {
       movies: ['Mamma Mia!', 'Call Me by Your Name', 'The Parent Trap', 'Moonrise Kingdom', 'The Talented Mr. Ripley', 'Before Sunset', 'Aftersun', 'The Way Way Back', 'Outer Banks', 'The Summer I Turned Pretty', 'Looking for Alaska', 'High Fidelity'],
       reads: ['Malibu Rising', 'Beach Read', 'Daisy Jones & The Six', 'The Summer Book', 'Happy Place', 'The Vacationers', 'Every Summer After', 'The Paper Palace', 'Bonjour Tristesse', 'Call Me by Your Name', 'Open Water', 'Just Kids'],
@@ -90,9 +90,9 @@ const SEASON_ROOMS = {
     },
   },
   autumn: {
-    title: { en: 'Autumn Rewatch Room', tr: 'Autumn Rewatch Odası' },
+    title: { en: 'Autumn Rewatch Room', tr: 'Sonbahar Rewatch Odası' },
     subtitle: { en: 'Campus walks, old letters, coffee-colored nostalgia.', tr: 'Kampüs yürüyüşleri, eski mektuplar, kahve tonlu nostalji.' },
-    cue: { en: 'Now open: autumn comfort rewatches', tr: 'Şimdi açık: autumn comfort rewatch' },
+    cue: { en: 'Now open: autumn comfort rewatches', tr: 'Şimdi açık: sonbahar konfor rewatch' },
     shelves: {
       movies: ['When Harry Met Sally', 'Dead Poets Society', 'Fantastic Mr. Fox', 'You’ve Got Mail', 'Good Will Hunting', 'Mona Lisa Smile', 'Practical Magic', 'October Sky', 'Gilmore Girls', 'Over the Garden Wall', 'Only Murders in the Building', 'Fleabag'],
       reads: ['If We Were Villains', 'The Secret History', 'Jane Eyre', 'Norwegian Wood', 'Rebecca', 'Babel', 'The Goldfinch', 'Ninth House', 'The Night Circus', 'A Little Life', 'The Bell Jar', 'Wuthering Heights'],
@@ -100,9 +100,9 @@ const SEASON_ROOMS = {
     },
   },
   winter: {
-    title: { en: 'Winter Slow Room', tr: 'Winter Slow Odası' },
+    title: { en: 'Winter Slow Room', tr: 'Kış Slow Odası' },
     subtitle: { en: 'Quiet rooms, deep focus, stories that stay warm.', tr: 'Sessiz odalar, derin odak, sıcak kalan hikayeler.' },
-    cue: { en: 'Now open: winter slow watches', tr: 'Şimdi açık: winter slow watch' },
+    cue: { en: 'Now open: winter slow watches', tr: 'Şimdi açık: yavaş kış seçkisi' },
     shelves: {
       movies: ['Carol', 'Little Women', 'The Holiday', 'The Grand Budapest Hotel', 'Eternal Sunshine of the Spotless Mind', 'About Time', 'Klaus', 'The Holdovers', 'Dash & Lily', 'Normal People', 'The Queen’s Gambit', 'Sherlock'],
       reads: ['A Little Life', 'The Snow Child', 'Wintering', 'Wuthering Heights', 'The Bear and the Nightingale', 'The Left Hand of Darkness', 'The Remains of the Day', 'Frankenstein', 'The Little Prince', 'The Midnight Library', 'The Catcher in the Rye', 'Villette'],
@@ -112,11 +112,11 @@ const SEASON_ROOMS = {
 };
 
 const LEVELS = [
-  { min: 0, title: 'Mood Hunter' },
-  { min: 250, title: 'Vibe Scout' },
-  { min: 600, title: 'Mood Curator' },
-  { min: 1000, title: 'Vibe Maestro' },
-  { min: 1600, title: 'Cinematic Oracle' },
+  { min: 0, title: 'Mood Hunter', trTitle: 'Mood Avcısı' },
+  { min: 250, title: 'Vibe Scout', trTitle: 'Vibe Kaşifi' },
+  { min: 600, title: 'Mood Curator', trTitle: 'Mood Küratörü' },
+  { min: 1000, title: 'Vibe Maestro', trTitle: 'Vibe Maestro' },
+  { min: 1600, title: 'Cinematic Oracle', trTitle: 'Sinematik Kahin' },
 ];
 
 const localDateKey = (value = new Date()) => {
@@ -308,7 +308,7 @@ const SpringReviewModal = ({
           {coverUrl ? <img src={coverUrl} alt={draft.title} /> : null}
           <span>{typeLabel}</span>
           <strong>{draft.title}</strong>
-          <em>{tr ? 'Spring challenge' : 'Spring challenge'}</em>
+          <em>{tr ? 'Sezon challenge' : 'Spring challenge'}</em>
         </div>
         <div className="spring-review-copy">
           <span>{tr ? 'Tamamlandı' : 'Completed'}</span>
@@ -468,6 +468,8 @@ const MotivationPage = () => {
   const activeColor = getVibeColor(seasonColorKey(seasonKey));
   const totalXp = summary?.currentUser?.xp ?? game.xp;
   const level = getLevel(totalXp);
+  const currentLevelTitle = tr ? level.current.trTitle : level.current.title;
+  const nextLevelTitle = tr ? level.next?.trTitle : level.next?.title;
   const completedCount = DAILY_TASKS.filter((task) => completedTaskIds.has(task.id)).length;
   const taskProgress = Math.round((completedCount / DAILY_TASKS.length) * 100);
   const nextXp = Math.max(0, level.next ? level.next.min - totalXp : 0);
@@ -498,25 +500,25 @@ const MotivationPage = () => {
   const badgeRows = [
     {
       id: 'watch',
-      label: tr ? 'Spring Screen Badge' : 'Spring Screen Badge',
+      label: tr ? 'Spring ekran rozeti' : 'Spring Screen Badge',
       done: seasonShelfProgress.movies.length >= seasonRoom.shelves.movies.length,
       count: `${seasonShelfProgress.movies.length}/${seasonRoom.shelves.movies.length}`,
     },
     {
       id: 'listen',
-      label: tr ? 'Spring Sound Badge' : 'Spring Sound Badge',
+      label: tr ? 'Spring ses rozeti' : 'Spring Sound Badge',
       done: seasonShelfProgress.music.length >= seasonRoom.shelves.music.length,
       count: `${seasonShelfProgress.music.length}/${seasonRoom.shelves.music.length}`,
     },
     {
       id: 'read',
-      label: tr ? 'Spring Reads Badge' : 'Spring Reads Badge',
+      label: tr ? 'Spring okuma rozeti' : 'Spring Reads Badge',
       done: seasonShelfProgress.reads.length >= seasonRoom.shelves.reads.length,
       count: `${seasonShelfProgress.reads.length}/${seasonRoom.shelves.reads.length}`,
     },
     {
       id: 'curator',
-      label: tr ? 'Season Curator' : 'Season Curator',
+      label: tr ? 'Sezon küratörü' : 'Season Curator',
       done: seasonCompleted >= seasonTotal,
       count: `${seasonCompleted}/${seasonTotal}`,
     },
@@ -729,18 +731,13 @@ const MotivationPage = () => {
         <div className="mot-v3-copy">
           <span>{t('navMotivation')} / {seasonRoom.cue[prefs.language]}</span>
           <h1 className="text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{seasonRoom.title[prefs.language]}</h1>
-          <p>
-            {tr
-              ? 'Bu sayfa artık gerçek bir yarış alanı: DB’deki herkes XP ile sıralanır, günlük görevler hesabına yazılır ve sezon odasında moodlar içeriklerle eşleşir.'
-              : 'This is now a real race space: every database user enters by XP, daily quests write to your account, and the seasonal room connects moods with titles.'}
-          </p>
           <div className="mot-v3-actions">
             <Link to="/vibe">{tr ? 'Yeni vibe üret' : 'Generate a vibe'}</Link>
           </div>
         </div>
 
         <div className="mot-v3-rank">
-          <span>{tr ? 'global rank' : 'global rank'}</span>
+          <span>{tr ? 'global sıra' : 'global rank'}</span>
           <strong>#{currentRank}</strong>
           <em>{totalXp} XP</em>
           <div>
@@ -748,7 +745,7 @@ const MotivationPage = () => {
           </div>
           <small>
             {level.next
-              ? `${nextXp} XP ${tr ? 'sonra' : 'to'} ${level.next.title}`
+              ? `${nextXp} XP ${tr ? 'sonra' : 'to'} ${nextLevelTitle}`
               : tr ? 'En üst seviye açık' : 'Top level unlocked'}
           </small>
         </div>
@@ -757,8 +754,8 @@ const MotivationPage = () => {
       <section className="mot-v3-race">
         <div className="mot-v3-leaderboard">
           <div className="mot-v3-section-head">
-            <span>{tr ? 'Gerçek leaderboard' : 'Real leaderboard'}</span>
-            <strong>{summaryLoading ? (tr ? 'yükleniyor' : 'loading') : `${leaderboard.length} users`}</strong>
+            <span>{tr ? 'Gerçek sıralama' : 'Real leaderboard'}</span>
+            <strong>{summaryLoading ? (tr ? 'yükleniyor' : 'loading') : `${leaderboard.length} ${tr ? 'kullanıcı' : 'users'}`}</strong>
           </div>
           <div className="mot-v3-leader-rows">
             {topRacers.map((item) => (
@@ -775,7 +772,7 @@ const MotivationPage = () => {
         <div className="mot-v3-checkin">
           <div className="mot-v3-section-head">
             <span>{tr ? 'Bugünün moodu' : 'Today’s mood'}</span>
-            <strong>{streak}/7 streak</strong>
+            <strong>{streak}/7 {tr ? 'seri' : 'streak'}</strong>
           </div>
           <div className="mot-v3-moods">
             {MOODS.map((mood) => {
@@ -800,7 +797,7 @@ const MotivationPage = () => {
 
       <section className="mot-v3-quests">
         <div className="mot-v3-section-head">
-          <span>{tr ? 'Daily quests' : 'Daily quests'}</span>
+          <span>{tr ? 'Günlük görevler' : 'Daily quests'}</span>
           <strong>{taskProgress}%</strong>
         </div>
         <div className="mot-v3-quest-grid">
@@ -832,8 +829,8 @@ const MotivationPage = () => {
           <div className="mot-v3-room-tabs">
             {[
               ['movies', tr ? 'Film & Dizi' : 'Film & Series'],
-              ['reads', tr ? 'Spring Reads' : 'Spring Reads'],
-              ['music', tr ? 'Spring Music' : 'Spring Music'],
+              ['reads', tr ? 'Spring okumaları' : 'Spring Reads'],
+              ['music', tr ? 'Spring müzikleri' : 'Spring Music'],
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -916,7 +913,7 @@ const MotivationPage = () => {
 
       <section className="mot-v3-badges">
         <div className="mot-v3-section-head">
-          <span>{tr ? 'Season badges' : 'Season badges'}</span>
+          <span>{tr ? 'Sezon rozetleri' : 'Season badges'}</span>
           <strong>{seasonCompleted}/{seasonTotal}</strong>
         </div>
         <div className="mot-v3-badge-grid">
@@ -931,8 +928,8 @@ const MotivationPage = () => {
       </section>
 
       <section className="mot-v3-footerline">
-        <span><MedalIcon /> {level.current.title}</span>
-        <strong>{tr ? 'Bu odadaki her etkileşim leaderboard’a bağlanır.' : 'Every interaction in this room feeds the leaderboard.'}</strong>
+        <span><MedalIcon /> {currentLevelTitle}</span>
+        <strong>{tr ? 'Bu odadaki her etkileşim sıralamaya bağlanır.' : 'Every interaction in this room feeds the leaderboard.'}</strong>
       </section>
 
       <SpringReviewModal
