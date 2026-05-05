@@ -14,6 +14,7 @@ const recommendationRoutes = require('./routes/recommendationRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const motivationRoutes = require('./routes/motivationRoutes');
+const moodboardRoutes = require('./routes/moodboardRoutes');
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/motivation', motivationRoutes);
+app.use('/api/moodboard', moodboardRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });

@@ -7,11 +7,11 @@ import api from '../services/api';
 import { getVibeColor } from '../utils/constants';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
-const GAME_KEY = 'moodflix.gameState';
-const SAVED_VIBES_KEY = 'moodflix.savedVibes';
-const WATCHED_KEY = 'moodflix.watched';
-const READ_KEY = 'moodflix.readBooks';
-const SEASONAL_PROGRESS_KEY = 'moodflix.seasonalProgress';
+const GAME_KEY = 'luma.gameState';
+const SAVED_VIBES_KEY = 'luma.savedVibes';
+const WATCHED_KEY = 'luma.watched';
+const READ_KEY = 'luma.readBooks';
+const SEASONAL_PROGRESS_KEY = 'luma.seasonalProgress';
 
 const MOODS = [
   { id: 'happy', emoji: '😊', label: { en: 'Bright', tr: 'Parlak' }, room: 'Sunlit Watch Room' },

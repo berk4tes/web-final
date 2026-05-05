@@ -8,10 +8,10 @@ import api from '../services/api';
 import { getVibeColor } from '../utils/constants';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
-const SAVED_VIBES_KEY = 'moodflix.savedVibes';
-const RECENT_MOODS_KEY = 'moodflix.recentMoods';
-const WATCHED_KEY = 'moodflix.watched';
-const READ_KEY = 'moodflix.readBooks';
+const SAVED_VIBES_KEY = 'luma.savedVibes';
+const RECENT_MOODS_KEY = 'luma.recentMoods';
+const WATCHED_KEY = 'luma.watched';
+const READ_KEY = 'luma.readBooks';
 
 const AnimatedNumber = ({ value, duration = 900 }) => {
   const [display, setDisplay] = useState(0);

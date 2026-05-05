@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BookDetailModal from '../components/BookDetailModal';
 import LoadingVibeState from '../components/LoadingVibeState';
@@ -12,10 +12,10 @@ import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions } from '../utils/constants';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 import { readVibeListsSession, writeVibeListsSession } from '../utils/vibeSession';
 
-const SAVED_VIBES_KEY = 'moodflix.savedVibes';
-const RECENT_MOODS_KEY = 'moodflix.recentMoods';
-const WATCHED_KEY = 'moodflix.watched';
-const READ_KEY = 'moodflix.readBooks';
+const SAVED_VIBES_KEY = 'luma.savedVibes';
+const RECENT_MOODS_KEY = 'luma.recentMoods';
+const WATCHED_KEY = 'luma.watched';
+const READ_KEY = 'luma.readBooks';
 
 const hasAnyRecommendationList = (lists) => (
   Array.isArray(lists?.movies) && lists.movies.length > 0
@@ -108,6 +108,7 @@ const WheelEmptyState = ({ language, suggestions, loading, onPick }) => {
 
 const VibePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?._id;
   const { vibeData, setVibe, colorKey, theme, setDraftMoodFromPrompt } = useMoodTheme();
@@ -577,8 +578,8 @@ const VibePage = () => {
     ? 'Vibeını yakala.'
     : 'Catch the vibe.';
   const musicSceneTitle = prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`;
-  const cinemaSceneTitle = prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`;
-  const booksSceneTitle = prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`;
+  const cinemaSceneTitle = prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} Screen`;
+  const booksSceneTitle = prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} Shelf`;
   return (
     <div className="vibe-zero-shell">
       <section className="vibe-zero-hero" style={{ '--mood-accent-live': accent }}>
@@ -1113,6 +1114,55 @@ const VibePage = () => {
                 </div>
 
                 <div className="library-shelf" aria-hidden />
+              </section>
+            )}
+
+            {/* ── Moodboard teaser ─────────────────────────── */}
+            {(visibleMovies.length > 0 || visibleBooks.length > 0) && (
+              <section className="vibe-moodboard-teaser" style={{ '--mood-accent-live': accent }}>
+                {/* Mini collage thumbnails */}
+                <div className="vmt-thumbs" aria-hidden>
+                  {[
+                    ...visibleMovies.filter((m) => m.poster).slice(0, 2),
+                    ...visibleBooks.filter((b) => b.poster).slice(0, 2),
+                  ].slice(0, 4).map((item, i) => (
+                    <img
+                      key={item._id || item.title}
+                      src={item.poster}
+                      alt=""
+                      className="vmt-thumb"
+                      style={{ '--i': i }}
+                    />
+                  ))}
+                  <div className="vmt-palette" aria-hidden>
+                    <span style={{ background: accent }} />
+                    <span style={{ background: theme?.soft || '#e8e0d5' }} />
+                    <span style={{ background: theme?.ink || '#1a1a1a' }} />
+                  </div>
+                </div>
+
+                {/* Copy + CTA */}
+                <div className="vmt-copy">
+                  <span className="vmt-eyebrow">
+                    {prefs.language === 'tr' ? 'Görsel atmosferin hazır' : 'Your visual vibe is ready'}
+                  </span>
+                  <h3 className="vmt-title">
+                    {prefs.language === 'tr' ? 'Moodboard oluştur' : 'Create your moodboard'}
+                  </h3>
+                  <p className="vmt-sub">
+                    {prefs.language === 'tr'
+                      ? 'Bu vibeı kolaj, poster ve sticker\'larla özelleştir.'
+                      : 'Turn this vibe into a collage poster you can customize and download.'}
+                  </p>
+                  <button
+                    type="button"
+                    className="vmt-cta"
+                    onClick={() => navigate('/moodboard')}
+                  >
+                    {prefs.language === 'tr' ? 'Moodboard stüdyosu' : 'Open Moodboard Studio'}
+                    <span aria-hidden>→</span>
+                  </button>
+                </div>
               </section>
             )}
           </>

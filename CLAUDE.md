@@ -250,6 +250,67 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-05] Moodboard flow connected to Vibe page prompt
+
+- **mood-frontend/src/pages/VibePage.jsx** — Added `useNavigate` import + `navigate` declaration. Added `vibe-moodboard-teaser` section just before the closing `</>` of the `vibeData && !loading` block. The teaser shows up to 4 rotated movie/book poster thumbnails (from already-loaded `visibleMovies`/`visibleBooks`), 3 mood palette dots (from `theme.accent`/`theme.soft`/`theme.ink`), and an "Open Moodboard Studio" button that calls `navigate('/moodboard')`. No extra API calls — all images come from existing vibe data.
+- **mood-frontend/src/pages/MoodboardPage.jsx** — Rewritten to consume `vibeData.prompt` from `useMoodTheme()` instead of its own textarea. Flow: (1) if no `vibeData.prompt` exists, renders an empty state with "Go to Vibe page" link; (2) on mount, auto-fires `runGenerate(vibeData.prompt)` tracked by `generatedForRef` to prevent double-firing; (3) header shows "Moodboard for: [prompt pill]" + "Edit mood" button (expands inline textarea → re-generates on save) + "Regenerate moodboard" button. Removed old `EXAMPLES` chips and large standalone textarea.
+- **mood-frontend/src/index.css** — Added `.vibe-moodboard-teaser`, `.vmt-thumb` collage layout (4 absolutely-positioned images with per-index rotations), `.vmt-palette`, `.vmt-cta` — and `.mb-prompt-header`, `.mb-prompt-pill`, `.mb-prompt-edit-*`, `.mb-regen-btn`, `.mb-empty-state` styles.
+- **Build:** `vite build` → 113 modules, 245kB CSS, 340kB JS, 0 errors.
+
+### [2026-05-05] MoodboardPage redesigned as AI mood-collage generator
+
+- **mood-backend/controllers/moodboardController.js** — New controller. Calls OpenAI (gpt-4o-mini) to generate `vibeTitle`, `vibeDescription`, `keywords` (6 Unsplash search terms), `palette` (5 hex colors), and `decorations`. Then fetches 2 images per keyword from Unsplash API (`UNSPLASH_ACCESS_KEY`, `Client-ID` auth header, `/search/photos` endpoint) via `Promise.allSettled`. Returns all data as a single JSON response.
+- **mood-backend/routes/moodboardRoutes.js** — New route file. `POST /moodboard/generate` protected by `auth` + `recommendationLimiter`.
+- **mood-backend/app.js** — Registered `moodboardRoutes` at `/api/moodboard`.
+- **mood-backend/.env.example** — Added `UNSPLASH_ACCESS_KEY` entry.
+- **mood-frontend/src/pages/MoodboardPage.jsx** — Complete rewrite. Old Vibe Lab UI replaced with a full AI moodboard generator: (1) mood input area with 5 example prompt chips, (2) a 600×840 CSS-scaled collage canvas with pointer-drag, absolute-positioned image/palette/text/sticker/annotation items, per-layout image styling (editorial/pinterest/cutout/diary), and 4 background options (paper/cream/pastel/dark), (3) a customisation panel with photo library, 9 sticker buttons, layout switcher, background swatches, palette preview, and vibe info card, (4) "Download poster" via html2canvas (lazy-imported) and "Copy share text" button.
+- **mood-frontend/src/index.css** — Added ~260-line moodboard CSS block: `.mb-page`, `.mb-input-section`, `.mb-canvas`, `.mb-texture-*`, `.mb-ctrl-*`, `.mb-panel`, `.mb-photo-btn`, `.mb-sticker-btn`, `.mb-layout-btn`, `.mb-bg-dot`, `.mb-vibe-card`, responsive 860px / 520px breakpoints.
+- **mood-frontend/package.json** — Added `html2canvas@^1.4.1` dependency (`npm install html2canvas`).
+- **Build:** `vite build` → 113 modules, 240kB CSS, 338kB JS, 0 errors.
+
+### [2026-05-06] Moodboard — canvas fill, alignment fix, button cleanup
+
+- **mood-frontend/src/pages/MoodboardPage.jsx** — (1) `ResizeObserver` scale changed from `Math.min(1, w/CW)` to `w/CW` so the canvas always fills its column width instead of stopping at 1:1; (2) `<header className="mb-prompt-header">` moved inside `<div className="mb-canvas-col">` so the prompt header and canvas share the same right edge; (3) "Copy share text" button and `handleShare` function removed; (4) controls row now has only "Remove selected" (conditional) + "Download poster"; (5) JSX restructured — `{mbData && !loading && (...)}` now wraps canvas+controls in a `<>` fragment; panel `<aside>` is a separate sibling conditional inside `mb-editor`.
+- **mood-frontend/src/index.css** — `.mb-canvas-col` got `max-width: 720px` so the canvas doesn't stretch beyond a readable poster size on wide screens; `.mb-ctrl-dl` got `flex: 2` so the Download button is visually dominant when both buttons are shown.
+- **Build:** `vite build` → 113 modules, 246kB CSS, 344kB JS, 0 errors.
+
+### [2026-05-06] Moodboard page — editorial redesign with expanded sticker system
+
+- **mood-frontend/src/pages/MoodboardPage.jsx** — Complete rewrite. Key additions: (1) `LAYOUT_SLOTS` object — 4 distinct slot arrays (editorial / pinterest / cutout / diary) with different x/y/rotation positions; (2) `applyLayout(newLayout)` — when user switches layout, repositions all image items to the new slot positions in-place without losing stickers/tape; (3) `STICKER_GROUPS` — 3 categorised groups (Icons × 12, Vintage × 12, Nature × 9) replacing the old flat 9-sticker array; (4) `TAPES` array (8 washi tape colours with CSS gradient patterns: stripe, dots, checkers, solid); (5) `TEXT_SNIPPETS` array (10 typewriter-style text phrases); (6) `addTape()` and `addSnippet()` functions; (7) `tape` and `snippet` item types in `renderItem()`; (8) layout-aware `imgStyle` and `boxShadow` — each layout has distinct image styling (pinterest: rounded, cutout: hard shadow, diary: sepia/white border); (9) page title `<h1 className="mb-page-title">Moodboard</h1>` matching app-wide heading scale; (10) `BACKGROUNDS` expanded from 4 to 6 options (added Blush and Sage); (11) panel JSX reorganised into Photo library → Sticker groups → Washi tape → Text snippets → Layout style → Background → Palette → Vibe info.
+- **mood-frontend/src/index.css** — Moodboard CSS section (lines 10451–11116) fully replaced. Key changes: `.mb-page-title` matches other page h1 scale (`clamp(2.8rem,6vw,5.2rem)`); `.mb-panel` now styled as editorial sidebar card (white/off-white bg, 20px border-radius, sticky positioning, scrollable); `.mb-photo-btn` larger aspect-ratio thumbnails (3-col grid, hover scale+shadow); `.mb-sticker-grid` 6-col compact grid; `.mb-sticker-group-label` subcategory headers; `.mb-tape-btn` (66×22px strips, hover rotate); `.mb-snippet-btn` (Courier New typewriter style, yellow tint); `.mb-texture-blush` / `.mb-texture-sage` added; responsive breakpoint changed from 860px → 900px for panel reflow.
+- **Build:** `vite build` → 113 modules, 246kB CSS, 345kB JS, 0 errors.
+
+### [2026-05-05] Brand rename — "moodflix" → "luma" in all frontend references
+
+- **mood-frontend/index.html** — Page `<title>` updated from "MoodFlix — AI Mood Recommender" to "Luma — AI Mood Recommender".
+- **mood-frontend/src/context/UserPreferencesContext.jsx** — `PREFS_KEY` storage key updated from `moodflix.preferences` to `luma.preferences`.
+- **mood-frontend/src/utils/vibeSession.js** — `CURRENT_VIBE_KEY` and `VIBE_LISTS_KEY` storage keys updated from `moodflix.*` to `luma.*`.
+- **mood-frontend/src/pages/MoodboardPage.jsx** — `SAVED_VIBES_KEY` and `RECENT_MOODS_KEY` updated from `moodflix.*` to `luma.*`.
+- **mood-frontend/src/pages/DashboardPage.jsx** — `SAVED_VIBES_KEY`, `RECENT_MOODS_KEY`, `WATCHED_KEY`, `READ_KEY` updated from `moodflix.*` to `luma.*`.
+- **mood-frontend/src/pages/VibePage.jsx** — Same four storage keys updated from `moodflix.*` to `luma.*`.
+- **mood-frontend/src/pages/MotivationPage.jsx** — `GAME_KEY`, `SAVED_VIBES_KEY`, `WATCHED_KEY`, `READ_KEY`, `SEASONAL_PROGRESS_KEY` updated from `moodflix.*` to `luma.*`.
+
+### [2026-05-05] Navbar scale reduced for a more balanced header
+
+- **mood-frontend/src/components/Navbar.jsx** — Slightly reduced the navbar height, tightened spacing, and scaled the brand text/subtitle down while keeping the same pill-based structure.
+- **mood-frontend/src/index.css** — Reduced the size of the nav pills, link buttons, avatar button, logo mark, and utility buttons so the header feels lighter without changing its visual style or colors.
+
+### [2026-05-05] Navbar enlarged with rounded pill navigation styling
+
+- **mood-frontend/src/components/Navbar.jsx** — Increased the navbar height and spacing, enlarged the brand text block, and wrapped the desktop nav plus right-side controls in pill-style shells to match the softer rounded reference layout.
+- **mood-frontend/src/index.css** — Rescaled navbar pieces including the logo mark, nav items, avatar button, utility buttons, hamburger, and mobile items while preserving the existing light/dark color palette.
+- **mood-frontend/src/index.css** — Added `nav-pill-shell` and `nav-actions-shell` container styles so the desktop navbar feels more substantial and balanced across the site without changing theme colors.
+
+### [2026-05-05] Loading capsule colors restored to a vivid rainbow glow
+
+- **mood-frontend/src/index.css** — Reworked the loader-only `vibe-loading-capsule` gradients so the spinner now uses a saturated pink-yellow-green-blue ring closer to the provided colorful reference instead of the washed-out pale version.
+- **mood-frontend/src/index.css** — Strengthened the loader aura and highlight dots so the loading state reads clearly in light mode while keeping the faster capsule rotation from the previous pass.
+
+### [2026-05-05] Loading screen switched to faster vibe-lab capsule
+
+- **mood-frontend/src/components/LoadingVibeState.jsx** — Replaced the loader’s custom percent/orb markup with the shared `vibe-lab-capsule` structure so the loading screen now uses the same rotating visual language as Vibe Lab.
+- **mood-frontend/src/index.css** — Added a final loader override block that hides the legacy orb layers, centers the capsule, boosts its aura glow, and shortens the spin duration so it rotates noticeably faster.
+
 ### [2026-05-05] Loading screen redesigned into a radiant orb
 
 - **mood-frontend/src/components/LoadingVibeState.jsx** — Replaced the old orbit-plus-card loader markup with a layered orb structure made from rotating rings, glow, and fluid sphere layers.

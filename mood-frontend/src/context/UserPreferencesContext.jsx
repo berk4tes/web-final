@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { translate } from '../utils/i18n';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
-export const PREFS_KEY = 'moodflix.preferences';
+export const PREFS_KEY = 'luma.preferences';
 
 export const REC_PREFS_DEFAULTS = {
   showMovies: true,

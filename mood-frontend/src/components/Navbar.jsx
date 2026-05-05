@@ -35,7 +35,7 @@ const Navbar = () => {
 
   return (
     <header className="navbar-root sticky top-0 z-40">
-      <div className="mx-auto flex h-14 max-w-[92rem] items-center justify-between gap-6 px-6">
+      <div className="mx-auto flex h-[4.8rem] max-w-[92rem] items-center justify-between gap-5 px-6 md:px-8">
 
         {/* Logo */}
         <Link to="/" className="flex shrink-0 items-center gap-2.5">
@@ -49,9 +49,9 @@ const Navbar = () => {
           >
             <LogoMark />
           </span>
-          <span className="text-[0.9rem] font-semibold tracking-tight text-ink-700">Luma</span>
+          <span className="text-[1rem] font-semibold tracking-tight text-ink-700">Luma</span>
           {vibeData?.mood?.title && (
-            <span className="hidden max-w-[14rem] truncate text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-ink-400 xl:block">
+            <span className="hidden max-w-[15rem] truncate text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-ink-400 xl:block">
               {vibeData.mood.title}
             </span>
           )}
@@ -59,7 +59,7 @@ const Navbar = () => {
 
         {/* Desktop nav */}
         {isAuthenticated && (
-          <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+          <nav className="nav-pill-shell hidden flex-1 items-center justify-center gap-1.5 lg:flex">
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
@@ -77,7 +77,7 @@ const Navbar = () => {
         )}
 
         {/* Right side */}
-        <div className="hidden shrink-0 items-center gap-3 md:flex">
+        <div className="nav-actions-shell hidden shrink-0 items-center gap-3 md:flex">
           {isAuthenticated ? (
             <>
               <Link
@@ -117,7 +117,7 @@ const Navbar = () => {
       {/* Mobile menu */}
       {open && (
         <div className="nav-mobile-drawer md:hidden">
-          <div className="mx-auto max-w-[92rem] space-y-0.5 px-4 py-2.5">
+          <div className="mx-auto max-w-[92rem] space-y-1 px-4 py-3">
             {isAuthenticated ? (
               <>
                 {NAV_ITEMS.map((item) => (

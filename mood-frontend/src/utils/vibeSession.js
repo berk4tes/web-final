@@ -1,5 +1,5 @@
-export const CURRENT_VIBE_KEY = 'moodflix.currentVibe';
-export const VIBE_LISTS_KEY = 'moodflix.currentVibeLists';
+export const CURRENT_VIBE_KEY = 'luma.currentVibe';
+export const VIBE_LISTS_KEY = 'luma.currentVibeLists';
 
 const VIBE_SESSION_KEYS = [CURRENT_VIBE_KEY, VIBE_LISTS_KEY];
 
