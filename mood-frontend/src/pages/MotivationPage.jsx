@@ -220,6 +220,30 @@ const writeSeasonalProgress = (userId, progress) => {
 
 const getSeasonItemKey = (seasonKey, shelf, title) => `${seasonKey}:${shelf}:${title}`;
 
+const getSeasonalCover = async (draft) => {
+  if (!draft?.title) return '';
+  if (draft.contentType === 'movie' || draft.contentType === 'series') {
+    const { data } = await api.get('/recommendations/tmdb/details', {
+      params: { title: draft.title, contentType: draft.contentType },
+    });
+    return data?.data?.details?.poster || '';
+  }
+  if (draft.contentType === 'book') {
+    const query = encodeURIComponent(draft.title);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&printType=books`);
+    const data = await res.json();
+    const imageLinks = data?.items?.[0]?.volumeInfo?.imageLinks || {};
+    return (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+  }
+  if (draft.contentType === 'music') {
+    const query = encodeURIComponent(draft.title);
+    const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=1`);
+    const data = await res.json();
+    return (data?.results?.[0]?.artworkUrl100 || '').replace('100x100bb', '600x600bb');
+  }
+  return '';
+};
+
 const MedalIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 2h8l-2 7h-4L8 2z" />
@@ -244,8 +268,27 @@ const SpringReviewModal = ({
   onEmotion,
   onSave,
 }) => {
+  const [coverUrl, setCoverUrl] = useState('');
+  const [hoverRating, setHoverRating] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setCoverUrl('');
+    setHoverRating(0);
+    if (!draft) return () => { active = false; };
+    getSeasonalCover(draft)
+      .then((url) => {
+        if (active) setCoverUrl(url || '');
+      })
+      .catch(() => {
+        if (active) setCoverUrl('');
+      });
+    return () => { active = false; };
+  }, [draft]);
+
   if (!draft) return null;
   const tr = language === 'tr';
+  const previewRating = hoverRating || rating;
   const typeLabel = draft.shelf === 'music'
     ? (tr ? 'müzik' : 'music')
     : draft.shelf === 'reads'
@@ -262,6 +305,7 @@ const SpringReviewModal = ({
           aria-label={tr ? 'Kapat' : 'Close'}
         />
         <div className="spring-review-poster" data-kind={draft.shelf}>
+          {coverUrl ? <img src={coverUrl} alt={draft.title} /> : null}
           <span>{typeLabel}</span>
           <strong>{draft.title}</strong>
           <em>{tr ? 'Spring challenge' : 'Spring challenge'}</em>
@@ -280,10 +324,17 @@ const SpringReviewModal = ({
                 key={value}
                 type="button"
                 onClick={() => onRating(value)}
-                className={value <= rating ? 'is-filled' : ''}
+                onMouseEnter={() => setHoverRating(value)}
+                onMouseLeave={() => setHoverRating(0)}
+                onFocus={() => setHoverRating(value)}
+                onBlur={() => setHoverRating(0)}
+                className={[
+                  value <= rating ? 'is-filled' : '',
+                  hoverRating && value <= previewRating && value > rating ? 'is-preview' : '',
+                ].filter(Boolean).join(' ')}
                 aria-label={`${value}/5`}
               >
-                <StarIcon filled={value <= rating} />
+                <StarIcon filled={value <= previewRating} />
               </button>
             ))}
           </div>
@@ -510,14 +561,6 @@ const MotivationPage = () => {
       return false;
     }
   };
-
-  useEffect(() => {
-    inferredTaskIds.forEach((taskId) => {
-      if (awardedTaskIds.has(taskId)) return;
-      const task = DAILY_TASKS.find((item) => item.id === taskId);
-      if (task) awardTask(task);
-    });
-  }, [inferredTaskIds.join('|'), Array.from(awardedTaskIds).join('|')]);
 
   const handleCheckin = async (mood) => {
     if (todayCheckin) {
@@ -834,6 +877,11 @@ const MotivationPage = () => {
                 const done = seasonShelfProgress[activeShelf].includes(itemKey);
                 const review = reviewByItemKey.get(itemKey);
                 const reviewEmotionLabel = REVIEW_EMOTIONS.find((item) => item.id === review?.emotion)?.label?.[prefs.language];
+                const rateLabel = activeShelf === 'movies'
+                  ? (tr ? 'izledim, puanla' : 'rate watched')
+                  : activeShelf === 'reads'
+                    ? (tr ? 'okudum, puanla' : 'rate read')
+                    : (tr ? 'dinledim, puanla' : 'rate listened');
                 return (
                   <button
                     key={title}
@@ -851,7 +899,7 @@ const MotivationPage = () => {
                     ) : null}
                     <em>
                       {done
-                        ? (tr ? 'tamamlandı' : 'complete')
+                        ? (review ? (tr ? 'puanlandı' : 'rated') : rateLabel)
                         : activeShelf === 'movies'
                           ? (tr ? 'izledim' : 'mark watched')
                           : activeShelf === 'reads'

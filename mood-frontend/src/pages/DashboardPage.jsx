@@ -9,6 +9,7 @@ import { getVibeColor } from '../utils/constants';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
+const RECENT_MOODS_KEY = 'moodflix.recentMoods';
 const WATCHED_KEY = 'moodflix.watched';
 const READ_KEY = 'moodflix.readBooks';
 
@@ -53,6 +54,34 @@ const parseMoodHistory = (items = []) =>
   }));
 
 const getItemKey = (item) => item?._id || item?.externalId || item?.title;
+
+const getCollectionThumbnail = async (item, type) => {
+  if (item?.thumbnail) return item.thumbnail;
+  if (!item?.title) return '';
+  if (type === 'watched') {
+    const { data } = await api.get('/recommendations/tmdb/details', {
+      params: {
+        title: item.title,
+        contentType: item.contentType === 'series' ? 'series' : 'movie',
+      },
+    });
+    return data?.data?.details?.poster || '';
+  }
+  if (type === 'read') {
+    const query = encodeURIComponent(item.title);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&printType=books`);
+    const data = await res.json();
+    const imageLinks = data?.items?.[0]?.volumeInfo?.imageLinks || {};
+    return (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+  }
+  if (type === 'music') {
+    const query = encodeURIComponent(item.title);
+    const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=1`);
+    const data = await res.json();
+    return (data?.results?.[0]?.artworkUrl100 || '').replace('100x100bb', '600x600bb');
+  }
+  return '';
+};
 
 const formatDate = (value, language) => {
   const date = new Date(value);
@@ -222,26 +251,31 @@ const YourMoods = ({ moodCounts, totalSignals, language }) => {
   );
 };
 
-const RecentMoods = ({ savedVibes, history, onReplay, language }) => {
+const RecentMoods = ({ savedVibes, recentMoods, history, onReplay, language }) => {
   const tr = language === 'tr';
   const timeline = [
-    ...history.slice(0, 4).map((entry) => ({
+    ...recentMoods.slice(0, 5).map((entry) => ({
+      id: `recent-${entry.id}`,
+      title: entry.mood?.title || moodLabel(entry.mood?.colorKey),
+      prompt: entry.prompt,
+      moodKey: moodFromColorKey(entry.mood?.colorKey),
+      date: entry.savedAt,
+    })),
+    ...history.slice(0, 5).map((entry) => ({
       id: entry.id,
       title: moodLabel(entry.moodLabel),
       prompt: entry.moodText,
       moodKey: moodFromColorKey(entry.moodLabel),
       date: entry.loggedAt,
-      intensity: entry.intensity,
     })),
-    ...savedVibes.slice(0, 4).map((vibe) => ({
+    ...savedVibes.slice(0, 5).map((vibe) => ({
       id: `saved-${vibe.id}`,
       title: vibe.mood?.title || moodLabel(vibe.mood?.colorKey),
       prompt: vibe.prompt,
       moodKey: moodFromColorKey(vibe.mood?.colorKey),
       date: vibe.savedAt,
-      intensity: Math.round((vibe.mood?.intensity || 0.5) * 10),
     })),
-  ].filter((item, index, arr) => item.prompt && arr.findIndex((x) => x.prompt === item.prompt) === index).slice(0, 6);
+  ].filter((item, index, arr) => item.prompt && arr.findIndex((x) => x.prompt === item.prompt) === index).slice(0, 5);
 
   return (
     <section className="dash-recent">
@@ -268,7 +302,7 @@ const RecentMoods = ({ savedVibes, history, onReplay, language }) => {
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <strong>{entry.title}</strong>
                 <em>{entry.prompt}</em>
-                <small>{formatDate(entry.date, language)} / {entry.intensity}/10</small>
+                <small>{formatDate(entry.date, language)}</small>
               </button>
             );
           })}
@@ -332,13 +366,29 @@ const TasteAndSearches = ({ savedVibes, history, favoriteMusic, watchedMedia, re
 const CollectionTile = ({ item, type, onRemove, language }) => {
   const tr = language === 'tr';
   const date = item.savedAt || item.watchedAt || item.readAt || item.createdAt;
+  const [thumbnail, setThumbnail] = useState(item.thumbnail || '');
+
+  useEffect(() => {
+    let active = true;
+    setThumbnail(item.thumbnail || '');
+    if (item.thumbnail || !item.title) return () => { active = false; };
+    getCollectionThumbnail(item, type)
+      .then((url) => {
+        if (active) setThumbnail(url || '');
+      })
+      .catch(() => {
+        if (active) setThumbnail('');
+      });
+    return () => { active = false; };
+  }, [item, type]);
+
   return (
     <article className={`dash-collection-tile dash-collection-${type}`}>
       <div className="dash-collection-art">
-        {item.thumbnail ? (
-          <img src={item.thumbnail} alt={item.title} loading="lazy" />
+        {thumbnail ? (
+          <img src={thumbnail} alt={item.title} loading="lazy" />
         ) : (
-          <span>{type === 'music' ? 'M' : type === 'read' ? 'B' : 'W'}</span>
+          <span>{item.title}</span>
         )}
       </div>
       <div className="dash-collection-copy">
@@ -434,6 +484,7 @@ const DashboardPage = () => {
   const tr = language === 'tr';
 
   const [savedVibes, setSavedVibes] = useState([]);
+  const [recentMoods, setRecentMoods] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [watched, setWatched] = useState([]);
   const [readBooks, setReadBooks] = useState([]);
@@ -441,9 +492,11 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const vibes = readUserScopedJson(SAVED_VIBES_KEY, userId, []);
+    const recent = readUserScopedJson(RECENT_MOODS_KEY, userId, []);
     const watchedItems = readUserScopedJson(WATCHED_KEY, userId, []);
     const readItems = readUserScopedJson(READ_KEY, userId, []);
     setSavedVibes(Array.isArray(vibes) ? vibes : []);
+    setRecentMoods(Array.isArray(recent) ? recent : []);
     setWatched(Array.isArray(watchedItems) ? watchedItems : []);
     setReadBooks(Array.isArray(readItems) ? readItems : []);
   }, [userId]);
@@ -522,7 +575,7 @@ const DashboardPage = () => {
         <div className="dash-hero-copy">
           <span>{t('navDashboard')}</span>
           <h1 className="text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{tr ? 'Mood arşivin, daha keskin bir sinyal gibi.' : 'Your mood archive, tuned like a signal.'}</h1>
-          <p>{tr ? 'Son moodların, koleksiyonların ve zevk profilin tek premium yüzeyde.' : 'Recent moods, collections, and taste signals in one premium surface.'}</p>
+          <p>{tr ? 'Son moodların ve koleksiyonların daha sakin bir düzende.' : 'Recent moods and collections, neatly sorted.'}</p>
         </div>
         <div className="dash-hero-metrics">
           <div>
@@ -543,7 +596,7 @@ const DashboardPage = () => {
         <DashboardCalendar history={moodHistory} savedVibes={savedVibes} language={language} />
       </section>
 
-      <RecentMoods savedVibes={savedVibes} history={moodHistory} onReplay={handleReplay} language={language} />
+      <RecentMoods savedVibes={savedVibes} recentMoods={recentMoods} history={moodHistory} onReplay={handleReplay} language={language} />
 
       <Collections
         favoriteMusic={favoriteMusic}

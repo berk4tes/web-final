@@ -47,7 +47,7 @@ Return ONLY a JSON object with this EXACT shape:
     { "title": "exact song title", "artist": "primary artist", "reason": "why it fits", "genre": "primary genre" }
   ],
   "movies": [
-    { "title": "exact movie/series title", "reason": "why it fits", "genre": "primary genre" }
+    { "title": "exact movie/series title", "contentType": "movie | series", "reason": "why it fits", "genre": "primary genre" }
   ],
   "books": [
     { "title": "exact book title", "reason": "why it fits", "genre": "primary genre" }
@@ -58,8 +58,10 @@ Rules:
 - "intensity" is a number between 0 and 1 representing emotional strength
 - "colorKey" must be one of: calm, sad, nostalgic, angry, dreamy, happy, excited
 - "tags" must be 3-5 short words/phrases describing the vibe
-- Each list (music, movies, books) must contain EXACTLY 10 items
-- For "movies" you may mix films and series — pick whatever matches the vibe best
+- "music" must contain EXACTLY 12 items so the interface can keep 10 visible after saves
+- "movies" must contain EXACTLY 12 items: the first 10 visible picks must be exactly 5 movies and 5 series, followed by 2 backup picks
+- "books" must contain EXACTLY 12 items so the interface can keep 10 visible after read marks
+- Every movie item must include "contentType" as either "movie" or "series"
 - Use real, well-known titles that exist on TMDB / Open Library / Spotify
 - Keep "reason" under 20 words and emotionally evocative`;
 };
@@ -140,6 +142,23 @@ const generateRecommendations = async (moodLabel, moodText, intensity, contentTy
 
 const VALID_COLOR_KEYS = ['calm', 'sad', 'nostalgic', 'angry', 'dreamy', 'happy', 'excited'];
 
+const orderMoviePicks = (items = []) => {
+  const normalized = items.map((item) => ({
+    ...item,
+    contentType: item?.contentType === 'series' || item?.type === 'series' || item?.mediaType === 'series'
+      ? 'series'
+      : 'movie',
+  }));
+  const movies = normalized.filter((item) => item.contentType === 'movie');
+  const series = normalized.filter((item) => item.contentType === 'series');
+  const leading = [...movies.slice(0, 5), ...series.slice(0, 5)];
+  const used = new Set(leading);
+  return [
+    ...leading,
+    ...normalized.filter((item) => !used.has(item)),
+  ].slice(0, 12);
+};
+
 const sanitizeVibe = (raw) => {
   const mood = raw.mood || {};
   const intensity = Number(mood.intensity);
@@ -152,9 +171,9 @@ const sanitizeVibe = (raw) => {
       intensity: Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 0.5,
       colorKey,
     },
-    music: Array.isArray(raw.music) ? raw.music.slice(0, 10) : [],
-    movies: Array.isArray(raw.movies) ? raw.movies.slice(0, 10) : [],
-    books: Array.isArray(raw.books) ? raw.books.slice(0, 10) : [],
+    music: Array.isArray(raw.music) ? raw.music.slice(0, 12) : [],
+    movies: Array.isArray(raw.movies) ? orderMoviePicks(raw.movies) : [],
+    books: Array.isArray(raw.books) ? raw.books.slice(0, 12) : [],
   };
 };
 
@@ -169,11 +188,11 @@ const interpretVibe = async (prompt) => {
   const builtPrompt = buildVibePrompt(prompt.trim());
 
   try {
-    const raw = await callAIRaw(builtPrompt, { maxTokens: 4096 });
+    const raw = await callAIRaw(builtPrompt, { maxTokens: 5500 });
     return sanitizeVibe(raw);
   } catch (firstError) {
     console.warn('Vibe interpretation failed, retrying:', firstError.message);
-    const raw = await callAIRaw(builtPrompt, { maxTokens: 4096 });
+    const raw = await callAIRaw(builtPrompt, { maxTokens: 5500 });
     return sanitizeVibe(raw);
   }
 };

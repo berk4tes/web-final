@@ -9,6 +9,7 @@ import { UserPreferencesProvider, useUserPreferences } from './context/UserPrefe
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import MotivationPage from './pages/MotivationPage';
+import MoodboardPage from './pages/MoodboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
@@ -141,7 +142,7 @@ const AppRoutes = () => (
       path="/moodboard"
       element={
         <ProtectedRoute>
-          <DashboardPage />
+          <MoodboardPage />
         </ProtectedRoute>
       }
     />

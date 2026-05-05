@@ -114,8 +114,8 @@ const AuthExperience = ({ mode }) => {
     body: isRegister
       ? (tr ? 'Mood’una uyan film, dizi, kitap ve müzikleri kendi arşivinde biriktir.' : 'Start building a personal archive of films, series, books, and songs that match your mood.')
       : (tr ? 'Kaldığın yerden devam et; yeni vibe’lar ve kayıtlı keşiflerin seni bekliyor.' : 'Pick up where you left off with saved discoveries and a fresh mood queue.'),
-    heroTitle: tr ? 'Ruh halin, sahne sahne açılan bir keşif alanına dönüşsün.' : 'Turn your mood into a living board of stories, songs, and pages.',
-    heroBody: tr ? 'Luma; film, dizi, müzik ve kitapları his üzerinden bir araya getirir.' : 'Luma brings films, series, music, and books together through the feeling you start with.',
+    heroTitle: tr ? 'Moodun, kürasyonun.' : 'Your mood, curated.',
+    heroBody: tr ? 'Hissinden doğan kısa bir keşif panosu.' : 'Stories, songs, pages. One mood.',
   };
 
   const validate = () => {
@@ -178,16 +178,13 @@ const AuthExperience = ({ mode }) => {
             <span className="auth-brand-mark">L</span>
             <span>Luma</span>
           </Link>
-          <p className="auth-kicker auth-step" style={{ '--step': 1 }}>
-            {tr ? 'Mood-first keşif' : 'Mood-first discovery'}
-          </p>
-          <h1 className="auth-hero-title auth-step" style={{ '--step': 2 }}>
+          <h1 className="auth-hero-title auth-step" style={{ '--step': 1 }}>
             {copy.heroTitle}
           </h1>
-          <p className="auth-hero-copy auth-step" style={{ '--step': 3 }}>
+          <p className="auth-hero-copy auth-step" style={{ '--step': 2 }}>
             {copy.heroBody}
           </p>
-          <div className="auth-pill-row auth-step" style={{ '--step': 4 }}>
+          <div className="auth-pill-row auth-step" style={{ '--step': 3 }}>
             {(tr ? ['Film', 'Dizi', 'Müzik', 'Kitap'] : ['Film', 'Series', 'Music', 'Books']).map((item) => (
               <span key={item}>{item}</span>
             ))}

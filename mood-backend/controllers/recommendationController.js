@@ -393,17 +393,24 @@ exports.generateVibe = asyncHandler(async (req, res) => {
       })
     : null;
 
+  const normalizeMovieType = (item) => (
+    item?.contentType === 'series' || item?.type === 'series' || item?.mediaType === 'series'
+      ? 'series'
+      : 'movie'
+  );
+
   const enrichList = async (items, contentType) =>
     Promise.all(
       (items || []).map(async (s) => {
-        const meta = await enrichRecommendation(s.title, contentType, s.artist);
+        const itemType = contentType === 'movie' ? normalizeMovieType(s) : contentType;
+        const meta = await enrichRecommendation(s.title, itemType, s.artist);
         return {
           ...(moodLog?._id ? { moodLogId: moodLog._id } : {}),
           ...(userId ? { userId } : {}),
-          contentType,
+          contentType: itemType,
           title: s.title,
           externalId: meta?.externalId || '',
-          source: meta?.source || defaultSourceFor(contentType),
+          source: meta?.source || defaultSourceFor(itemType),
           poster: meta?.poster || '',
           overview: meta?.overview || s.artist || '',
           runtime: meta?.runtime || null,

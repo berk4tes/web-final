@@ -13,6 +13,7 @@ import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 import { readVibeListsSession, writeVibeListsSession } from '../utils/vibeSession';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
+const RECENT_MOODS_KEY = 'moodflix.recentMoods';
 const WATCHED_KEY = 'moodflix.watched';
 const READ_KEY = 'moodflix.readBooks';
 
@@ -148,33 +149,36 @@ const VibePage = () => {
   const shownMusic = musicList.length ? musicList : rawMusic;
   const shownMovies = movieList.length ? movieList : rawMovies;
   const shownBooks = bookList.length ? bookList : rawBooks;
-  const activeMovie = shownMovies.find((item) => getItemId(item) === activeMovieId) || shownMovies[0];
-  const activeMovieIndex = Math.max(0, shownMovies.findIndex((item) => getItemId(item) === getItemId(activeMovie)));
+  const visibleMusic = useMemo(() => shownMusic.slice(0, 10), [shownMusic]);
+  const visibleMovies = useMemo(() => shownMovies.slice(0, 10), [shownMovies]);
+  const visibleBooks = useMemo(() => shownBooks.slice(0, 10), [shownBooks]);
+  const activeMovie = visibleMovies.find((item) => getItemId(item) === activeMovieId) || visibleMovies[0];
+  const activeMovieIndex = Math.max(0, visibleMovies.findIndex((item) => getItemId(item) === getItemId(activeMovie)));
   const carouselOffsets =
-    shownMovies.length >= 5 ? [-2, -1, 0, 1, 2] :
-    shownMovies.length === 4 ? [-1, 0, 1, 2] :
-    shownMovies.length === 3 ? [-1, 0, 1] :
-    shownMovies.length === 2 ? [0, 1] :
-    shownMovies.length === 1 ? [0] : [];
+    visibleMovies.length >= 5 ? [-2, -1, 0, 1, 2] :
+    visibleMovies.length === 4 ? [-1, 0, 1, 2] :
+    visibleMovies.length === 3 ? [-1, 0, 1] :
+    visibleMovies.length === 2 ? [0, 1] :
+    visibleMovies.length === 1 ? [0] : [];
   const cinemaCarouselMovies = carouselOffsets.map((offset) => {
-    const index = (activeMovieIndex + offset + shownMovies.length) % shownMovies.length;
-    return { movie: shownMovies[index], offset };
+    const index = (activeMovieIndex + offset + visibleMovies.length) % visibleMovies.length;
+    return { movie: visibleMovies[index], offset };
   });
-  const activeMusic = shownMusic.find((item) => getItemId(item) === activeMusicId) || shownMusic[0];
-  const activeBook = shownBooks.find((item) => getItemId(item) === activeBookId) || shownBooks[0];
+  const activeMusic = visibleMusic.find((item) => getItemId(item) === activeMusicId) || visibleMusic[0];
+  const activeBook = visibleBooks.find((item) => getItemId(item) === activeBookId) || visibleBooks[0];
   const activeBookCover = activeBook?.poster ||
     (activeBook?.title
       ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(activeBook.title)}-L.jpg?default=false`
       : '');
-  const activeBookIndex = Math.max(0, shownBooks.findIndex((item) => getItemId(item) === getItemId(activeBook)));
+  const activeBookIndex = Math.max(0, visibleBooks.findIndex((item) => getItemId(item) === getItemId(activeBook)));
   const availableScenes = [
-    recPrefs.showMusic && shownMusic.length > 0
+    recPrefs.showMusic && visibleMusic.length > 0
       ? { id: 'music', label: prefs.language === 'tr' ? 'Müzik' : 'Music', kicker: 'soundtrack' }
       : null,
-    (recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0
+    (recPrefs.showMovies || recPrefs.showSeries) && visibleMovies.length > 0
       ? { id: 'cinema', label: prefs.language === 'tr' ? 'Film / Dizi' : 'Film / Series', kicker: 'spotlight' }
       : null,
-    recPrefs.showBooks && shownBooks.length > 0
+    recPrefs.showBooks && visibleBooks.length > 0
       ? { id: 'books', label: prefs.language === 'tr' ? 'Kitaplar' : 'Books', kicker: 'storybook' }
       : null,
   ].filter(Boolean);
@@ -189,34 +193,34 @@ const VibePage = () => {
   };
 
   useEffect(() => {
-    if (!shownMovies.length) {
+    if (!visibleMovies.length) {
       setActiveMovieId(null);
       return;
     }
-    if (!shownMovies.some((item) => getItemId(item) === activeMovieId)) {
-      setActiveMovieId(getItemId(shownMovies[0]));
+    if (!visibleMovies.some((item) => getItemId(item) === activeMovieId)) {
+      setActiveMovieId(getItemId(visibleMovies[0]));
     }
-  }, [shownMovies, activeMovieId]);
+  }, [visibleMovies, activeMovieId]);
 
   useEffect(() => {
-    if (!shownMusic.length) {
+    if (!visibleMusic.length) {
       setActiveMusicId(null);
       return;
     }
-    if (!shownMusic.some((item) => getItemId(item) === activeMusicId)) {
-      setActiveMusicId(getItemId(shownMusic[0]));
+    if (!visibleMusic.some((item) => getItemId(item) === activeMusicId)) {
+      setActiveMusicId(getItemId(visibleMusic[0]));
     }
-  }, [shownMusic, activeMusicId]);
+  }, [visibleMusic, activeMusicId]);
 
   useEffect(() => {
-    if (!shownBooks.length) {
+    if (!visibleBooks.length) {
       setActiveBookId(null);
       return;
     }
-    if (!shownBooks.some((item) => getItemId(item) === activeBookId)) {
-      setActiveBookId(getItemId(shownBooks[0]));
+    if (!visibleBooks.some((item) => getItemId(item) === activeBookId)) {
+      setActiveBookId(getItemId(visibleBooks[0]));
     }
-  }, [shownBooks, activeBookId]);
+  }, [visibleBooks, activeBookId]);
 
   useEffect(() => {
     if (!availableScenes.length) return;
@@ -312,6 +316,18 @@ const VibePage = () => {
       };
       setVibe(data);
       setPrompt(value);
+      const recent = readUserScopedJson(RECENT_MOODS_KEY, userId, []);
+      const recentEntry = {
+        id: Date.now(),
+        prompt: value,
+        mood: data.mood,
+        savedAt: new Date().toISOString(),
+      };
+      const nextRecent = [
+        recentEntry,
+        ...(Array.isArray(recent) ? recent : []).filter((item) => item.prompt !== value),
+      ].slice(0, 5);
+      writeUserScopedJson(RECENT_MOODS_KEY, userId, nextRecent);
       setTimeout(() => {
         document.getElementById('vibe-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -371,6 +387,7 @@ const VibePage = () => {
     setSavedVibes(next);
     writeUserScopedJson(SAVED_VIBES_KEY, userId, next);
     toast.success('Vibe saved');
+    api.post('/motivation/award', { taskId: 'save' }).catch(() => {});
   };
 
   const dismissMovie = (item) => {
@@ -382,7 +399,7 @@ const VibePage = () => {
       externalId: item.externalId || item.title,
       title: item.title,
       thumbnail: item.poster,
-      contentType: 'movie',
+      contentType: item.contentType === 'series' ? 'series' : 'movie',
       watchedAt: new Date().toISOString(),
     };
     if (!existing.some((w) => (w.externalId || w.title) === (entry.externalId || entry.title))) {
@@ -422,7 +439,7 @@ const VibePage = () => {
     });
     if (!wasFavorite) {
       if (contentType === 'book') setBookList((prev) => prev.filter((b) => getItemId(b) !== id));
-      if (contentType === 'movie') setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
+      if (contentType === 'movie' || contentType === 'series') setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
     }
   };
 
@@ -473,11 +490,8 @@ const VibePage = () => {
   const hasProjectionMetadata = projectedDirectors.length || projectedCast.length || projectedProviders.length || projectedProviderLogos.length;
   const moodTitle = vibeData?.mood?.title || (prefs.language === 'tr' ? 'bu ruh hali' : 'this mood');
   const heroHeadline = prefs.language === 'tr'
-    ? 'Bugün nasıl bir sahnenin içindesin?'
-    : 'What kind of scene are you in today?';
-  const heroDescription = prefs.language === 'tr'
-    ? 'Bir his yaz; sana uygun şarkı, film ve kitabı aynı atmosferde bulalım.'
-    : 'Write one feeling; get songs, films, and books in the same atmosphere.';
+    ? 'Moodunu yaz.'
+    : 'Set the mood.';
   const musicSceneTitle = prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`;
   const cinemaSceneTitle = prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`;
   const booksSceneTitle = prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`;
@@ -500,7 +514,6 @@ const VibePage = () => {
         <div className="vibe-zero-hero-inner">
           <div className="vibe-zero-copy mx-auto flex w-full max-w-[58rem] flex-col items-center text-center">
             <h1 className="zero-title text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{heroHeadline}</h1>
-            <p className="zero-subtitle">{heroDescription}</p>
 
             <form
               onSubmit={(e) => {
@@ -603,9 +616,7 @@ const VibePage = () => {
 
         {!loading && !vibeData && (
           <section className="zero-empty">
-            <span>01</span>
             <h2>{t('emptyTitle')}</h2>
-            <p>{t('emptyBody')}</p>
           </section>
         )}
 
@@ -674,7 +685,7 @@ const VibePage = () => {
               </section>
             )}
 
-            {selectedScene === 'music' && recPrefs.showMusic && shownMusic.length > 0 && (
+            {selectedScene === 'music' && recPrefs.showMusic && visibleMusic.length > 0 && (
               <section className="zero-chapter zero-music" style={{ '--mood-accent-live': accent }}>
                 <header className="zero-chapter-head grid-cols-1">
                   <h2 className="whitespace-nowrap text-[clamp(2.9rem,4.7vw,5rem)] leading-[0.9]">{musicSceneTitle}</h2>
@@ -686,7 +697,7 @@ const VibePage = () => {
                       {activeMusic?.poster && <img src={activeMusic.poster} alt="" />}
                     </div>
                     <div className="sound-focus-text">
-                      <span>{String(shownMusic.findIndex((item) => getItemId(item) === getItemId(activeMusic)) + 1).padStart(2, '0')}</span>
+                      <span>{String(visibleMusic.findIndex((item) => getItemId(item) === getItemId(activeMusic)) + 1).padStart(2, '0')}</span>
                       <h3 className="whitespace-nowrap text-[clamp(2.8rem,4.8vw,4.9rem)] leading-[0.84]">{activeMusic?.title}</h3>
                       <div>
                         <a href={getMusicSearch(activeMusic, 'spotify')} target="_blank" rel="noreferrer">Spotify</a>
@@ -699,7 +710,7 @@ const VibePage = () => {
                   </div>
 
                   <div className="sound-lines">
-                    {shownMusic.slice(0, 10).map((m, index) => {
+                    {visibleMusic.map((m, index) => {
                       const active = getItemId(m) === getItemId(activeMusic);
                       return (
                         <button
@@ -719,7 +730,7 @@ const VibePage = () => {
               </section>
             )}
 
-            {selectedScene === 'cinema' && (recPrefs.showMovies || recPrefs.showSeries) && shownMovies.length > 0 && (
+            {selectedScene === 'cinema' && (recPrefs.showMovies || recPrefs.showSeries) && visibleMovies.length > 0 && (
               <section className="zero-chapter zero-cinema" style={{ '--mood-accent-live': accent }}>
                 {/* Atmosphere: spotlights, projector, curtains, popcorn */}
                 <div className="cinema-atmosphere" aria-hidden>
@@ -739,7 +750,7 @@ const VibePage = () => {
                 <div className="cinema-film-strip" aria-hidden>
                   <div className="cinema-sprockets" />
                   <div className="cinema-film-ticker">
-                    {[...shownMovies, ...shownMovies, ...shownMovies].map((m, i) => (
+                    {[...visibleMovies, ...visibleMovies, ...visibleMovies].map((m, i) => (
                       <span key={i}>{m.title}</span>
                     ))}
                   </div>
@@ -754,14 +765,17 @@ const VibePage = () => {
                 <div className="cinema-stage">
                   {/* Left: numbered tracklist */}
                   <div className="cinema-tracklist">
-                    {shownMovies.slice(0, 8).map((movie, index) => {
+                    {visibleMovies.map((movie, index) => {
                       const active = getItemId(movie) === getItemId(activeMovie);
                       return (
                         <button
                           key={movie._id || movie.title}
                           type="button"
                           className={`cinema-track ${active ? 'is-active' : ''}`}
-                          onClick={() => setActiveMovieId(getItemId(movie))}
+                          onClick={() => {
+                            setActiveMovieId(getItemId(movie));
+                            setMovieDetail(movie);
+                          }}
                         >
                           {movie.poster && <img className="cinema-track-poster" src={movie.poster} alt="" />}
                           <span className="cinema-track-num">{String(index + 1).padStart(2, '0')}</span>
@@ -817,30 +831,17 @@ const VibePage = () => {
                     </div>
                   </div>
 
-                  {/* Right: info + actions */}
+                  {/* Right: compact info. The full action/details card opens below. */}
                   <div className="cinema-info">
                     <span className="cinema-info-eyebrow">
-                      spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {shownMovies.length}
+                      spotlight {String(activeMovieIndex + 1).padStart(2, '0')} / {visibleMovies.length}
                     </span>
                     <h3 className="cinema-info-title">{activeMovie?.title}</h3>
                     {activeMovie?.genre && <p className="cinema-info-genre">{activeMovie.genre}</p>}
                     <p className="cinema-info-desc">{activeMovie?.aiExplanation || activeMovie?.overview}</p>
-                    <div className="cinema-info-actions">
-                      <a
-                        className="action-detail"
-                        href={getMovieSearch(activeMovie, 'trailer')}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Trailer
-                      </a>
-                      <button type="button" className="action-favorite" onClick={() => activeMovie && handleToggleFavoriteAndHide(activeMovie, 'movie')}>
-                        {isFavorite(getItemId(activeMovie)) ? t('inFavorites') : t('addFavorite')}
-                      </button>
-                      <button type="button" className="action-bookmark" onClick={() => activeMovie && dismissMovie(activeMovie)}>
-                        {prefs.language === 'tr' ? 'İzledim' : 'Watched'}
-                      </button>
-                    </div>
+                    <small className="cinema-info-hint">
+                      {prefs.language === 'tr' ? 'Detay kartı aşağıda açılır.' : 'Details open below.'}
+                    </small>
                   </div>
                 </div>
 
@@ -919,7 +920,7 @@ const VibePage = () => {
                         <div className="cinema-projection-links">
                           <a href={getMovieSearch(projectedMovie, 'imdb')} target="_blank" rel="noreferrer">IMDb</a>
                           <a href={getMovieSearch(projectedMovie, 'letterboxd')} target="_blank" rel="noreferrer">Letterboxd</a>
-                          <button type="button" className="action-favorite" onClick={() => handleToggleFavoriteAndHide(projectedMovie, 'movie')}>
+                          <button type="button" className="action-favorite" onClick={() => handleToggleFavoriteAndHide(projectedMovie, projectedMovie.contentType === 'series' ? 'series' : 'movie')}>
                             {isFavorite(getItemId(projectedMovie)) ? t('inFavorites') : t('addFavorite')}
                           </button>
                         </div>
@@ -932,7 +933,7 @@ const VibePage = () => {
                 <div className="cinema-film-strip" aria-hidden>
                   <div className="cinema-sprockets" />
                   <div className="cinema-film-ticker cinema-film-ticker-rev">
-                    {[...shownMovies, ...shownMovies, ...shownMovies].map((m, i) => (
+                    {[...visibleMovies, ...visibleMovies, ...visibleMovies].map((m, i) => (
                       <span key={i}>{m.title}</span>
                     ))}
                   </div>
@@ -941,7 +942,7 @@ const VibePage = () => {
               </section>
             )}
 
-            {selectedScene === 'books' && recPrefs.showBooks && shownBooks.length > 0 && (
+            {selectedScene === 'books' && recPrefs.showBooks && visibleBooks.length > 0 && (
               <section className="zero-chapter zero-books" style={{ '--mood-accent-live': accent }}>
                 {/* Reading room atmosphere */}
                 <div className="library-atmosphere" aria-hidden>
@@ -992,11 +993,11 @@ const VibePage = () => {
                   {/* Right: shelf notes */}
                   <div className="library-info">
                     <span className="library-info-eyebrow">
-                      {`volume ${String(shownBooks.findIndex((b) => getItemId(b) === getItemId(activeBook)) + 1 || 1).padStart(2, '0')} / ${shownBooks.length}`}
+                      {`volume ${String(visibleBooks.findIndex((b) => getItemId(b) === getItemId(activeBook)) + 1 || 1).padStart(2, '0')} / ${visibleBooks.length}`}
                     </span>
                     <h3 className="library-info-title">{prefs.language === 'tr' ? 'Mood rafından seç' : 'Choose from the mood shelf'}</h3>
                     <div className="library-cover-rail">
-                      {shownBooks.slice(0, 10).map((book, index) => {
+                      {visibleBooks.map((book, index) => {
                         const cover = book.poster ||
                           (book.title ? `https://covers.openlibrary.org/b/title/${encodeURIComponent(book.title)}-L.jpg?default=false` : '');
                         const active = getItemId(book) === getItemId(activeBook);
