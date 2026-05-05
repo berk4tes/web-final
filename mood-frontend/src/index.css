@@ -8084,7 +8084,7 @@
   min-height: clamp(21rem, 42vw, 35rem);
   border-color: color-mix(in srgb, var(--loading-accent) 24%, transparent);
   border-radius: 1.35rem;
-  padding: clamp(2.2rem, 6vw, 4rem) 1rem;
+  padding: clamp(2.6rem, 6vw, 4.4rem) 1rem;
   background:
     radial-gradient(circle at 22% 22%, color-mix(in srgb, #7c5cff 28%, transparent), transparent 15rem),
     radial-gradient(circle at 78% 28%, color-mix(in srgb, #f56f9f 22%, transparent), transparent 14rem),
@@ -8129,40 +8129,138 @@
 }
 
 .vibe-loading-mark {
-  width: min(12rem, 48vw);
+  position: relative;
+  width: min(17rem, 58vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
 }
 
 .vibe-loading-orbit {
-  background:
-    conic-gradient(from 0deg, transparent 0 13%, #7c5cff 14% 22%, transparent 23% 40%, #ff7aa8 42% 50%, transparent 51% 68%, #55d6be 70% 77%, transparent 78% 100%);
-  animation: loadingAuraSpin 2.8s linear infinite;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: loadingAuraSpin 9s linear infinite;
   filter:
-    drop-shadow(0 0 18px color-mix(in srgb, #7c5cff 42%, transparent))
-    drop-shadow(0 0 30px color-mix(in srgb, #ff7aa8 30%, transparent));
+    drop-shadow(0 0 24px color-mix(in srgb, var(--loading-accent) 24%, transparent))
+    drop-shadow(0 0 44px rgba(98, 210, 255, 0.18));
 }
 
-.vibe-loading-orbit span {
-  width: 0.76rem;
-  background: linear-gradient(135deg, #fff, var(--loading-accent));
+.vibe-loading-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 43% 57% 54% 46% / 48% 40% 60% 52%;
+  mix-blend-mode: screen;
 }
 
-.vibe-loading-card {
-  width: 50%;
-  border-radius: 0.9rem;
-  padding: 0.78rem;
+.vibe-loading-orbit-ring-a {
+  background:
+    conic-gradient(from 210deg, rgba(255,255,255,0.12), rgba(100,208,255,0.78), rgba(132,110,255,0.82), rgba(255,255,255,0.22), rgba(109,255,226,0.74), rgba(255,255,255,0.12));
+  opacity: 0.76;
+  animation: auraBreath 5.2s ease-in-out infinite;
 }
 
-.vibe-loading-card i {
-  height: 0.68rem;
+.vibe-loading-orbit-ring-b {
+  inset: 10%;
+  border-radius: 58% 42% 45% 55% / 45% 58% 42% 55%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.94), transparent 20%),
+    conic-gradient(from 40deg, rgba(255,255,255,0), rgba(91,255,226,0.62), rgba(255,255,255,0), rgba(131,165,255,0.76), rgba(255,255,255,0));
+  filter: blur(4px);
+  opacity: 0.9;
+  animation: loadingAuraSpin 6.8s linear infinite reverse;
+}
+
+.vibe-loading-orbit-glow {
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3), rgba(130,194,255,0.16) 38%, rgba(88,224,214,0.1) 58%, transparent 72%);
+  filter: blur(12px);
+}
+
+.vibe-loading-sphere {
+  position: relative;
+  z-index: 2;
+  width: 74%;
+  aspect-ratio: 1;
+  border-radius: 43% 57% 54% 46% / 48% 40% 60% 52%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 24%, rgba(255,255,255,0.96), rgba(255,255,255,0.32) 18%, transparent 30%),
+    radial-gradient(circle at 70% 78%, rgba(111,255,233,0.5), transparent 22%),
+    radial-gradient(circle at 66% 30%, rgba(104,171,255,0.68), transparent 36%),
+    linear-gradient(145deg, rgba(224,247,255,0.96), rgba(112,186,255,0.84) 46%, rgba(90,230,215,0.72) 70%, rgba(255,255,255,0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.78),
+    inset 0 -24px 40px rgba(79,170,255,0.2),
+    0 26px 80px color-mix(in srgb, var(--loading-accent) 18%, transparent);
+  transform: rotate(-14deg);
+  animation: auraBreath 4.8s ease-in-out infinite;
+}
+
+.vibe-loading-sphere-layer,
+.vibe-loading-sphere-highlight,
+.vibe-loading-sphere-core {
+  position: absolute;
+  border-radius: inherit;
+}
+
+.vibe-loading-sphere-layer-a {
+  inset: 8%;
+  background:
+    radial-gradient(circle at 58% 30%, rgba(255,255,255,0.88), transparent 20%),
+    linear-gradient(150deg, rgba(255,255,255,0.08), rgba(75,154,255,0.3) 46%, rgba(81,236,209,0.24));
+  mix-blend-mode: screen;
+  transform: rotate(22deg);
+}
+
+.vibe-loading-sphere-layer-b {
+  inset: 18% 10% 14% 20%;
+  border-radius: 56% 44% 48% 52% / 44% 60% 40% 56%;
+  background:
+    linear-gradient(135deg, rgba(0,127,255,0.58), rgba(81,235,211,0.52) 58%, rgba(255,255,255,0.14));
+  filter: blur(2px);
+  opacity: 0.9;
+  transform: rotate(-26deg);
+}
+
+.vibe-loading-sphere-layer-c {
+  inset: 12% 24% 26% 16%;
+  border-radius: 42% 58% 50% 50% / 56% 36% 64% 44%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255,255,255,0.92), transparent 18%),
+    linear-gradient(160deg, rgba(120,188,255,0.76), rgba(77,229,219,0.58));
+  opacity: 0.88;
+  transform: rotate(18deg);
+}
+
+.vibe-loading-sphere-highlight {
+  inset: 6% 12% 48% 42%;
+  border-radius: 52% 48% 62% 38%;
+  background: radial-gradient(circle at 40% 40%, rgba(255,255,255,0.98), rgba(255,255,255,0.24) 54%, transparent 72%);
+  filter: blur(4px);
+  opacity: 0.96;
+}
+
+.vibe-loading-sphere-core {
+  inset: 26%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 34%, rgba(255,255,255,0.92), rgba(255,255,255,0.24) 26%, rgba(110,210,255,0.12) 40%, transparent 62%),
+    radial-gradient(circle at 60% 62%, rgba(99,255,224,0.42), transparent 34%);
+  filter: blur(1px);
 }
 
 .vibe-loading-state p {
   position: relative;
   z-index: 2;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   max-width: 22rem;
   font-size: clamp(0.92rem, 1.6vw, 1.15rem);
   font-weight: 850;
+  letter-spacing: -0.01em;
 }
 
 .auth-page {

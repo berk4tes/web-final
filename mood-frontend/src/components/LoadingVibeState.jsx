@@ -1,7 +1,7 @@
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { getVibeColor } from '../utils/constants';
 
-const LoadingVibeState = () => {
+const LoadingVibeState = ({ message = 'Warming up recommendations...' }) => {
   const { colorKey } = useMoodTheme();
   const color = colorKey ? getVibeColor(colorKey) : null;
 
@@ -15,18 +15,20 @@ const LoadingVibeState = () => {
     <div className="vibe-loading-state animate-fade-in" style={style}>
       <div className="vibe-loading-mark" aria-hidden>
         <div className="vibe-loading-orbit">
-          <span />
-          <span />
-          <span />
+          <span className="vibe-loading-orbit-ring vibe-loading-orbit-ring-a" />
+          <span className="vibe-loading-orbit-ring vibe-loading-orbit-ring-b" />
+          <span className="vibe-loading-orbit-glow" />
         </div>
-        <div className="vibe-loading-card">
-          <i />
-          <i />
-          <i />
+        <div className="vibe-loading-sphere">
+          <span className="vibe-loading-sphere-layer vibe-loading-sphere-layer-a" />
+          <span className="vibe-loading-sphere-layer vibe-loading-sphere-layer-b" />
+          <span className="vibe-loading-sphere-layer vibe-loading-sphere-layer-c" />
+          <span className="vibe-loading-sphere-highlight" />
+          <span className="vibe-loading-sphere-core" />
         </div>
       </div>
 
-      <p>Warming up recommendations...</p>
+      <p>{message}</p>
     </div>
   );
 };

@@ -250,6 +250,13 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-05] Loading screen redesigned into a radiant orb
+
+- **mood-frontend/src/components/LoadingVibeState.jsx** — Replaced the old orbit-plus-card loader markup with a layered orb structure made from rotating rings, glow, and fluid sphere layers.
+- **mood-frontend/src/components/LoadingVibeState.jsx** — Added a `message` prop default so the component cleanly renders the passed loading copy instead of relying on one hardcoded string.
+- **mood-frontend/src/index.css** — Reworked the final `vibe-loading-state` styles so the loader now appears as a luminous color-shifting sphere with radiant atmosphere, closer to the provided visual references.
+- **Verification:** ran `npm run build` in `mood-frontend/` successfully after the loading-screen redesign.
+
 ### [2026-05-05] Music sleeve expanded again and scene title forced to one line
 
 - **mood-frontend/src/pages/VibePage.jsx** — Forced the music scene section title onto one line with `whitespace-nowrap` and a tighter responsive size clamp.
