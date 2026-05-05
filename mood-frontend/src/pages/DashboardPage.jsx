@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import api from '../services/api';
 import { getVibeColor } from '../utils/constants';
+import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
 const WATCHED_KEY = 'moodflix.watched';
@@ -424,6 +426,8 @@ const Collections = ({ favoriteMusic, watchedMedia, readBooks, onRemoveFavorite,
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?._id;
   const { theme } = useMoodTheme();
   const { prefs, t } = useUserPreferences();
   const language = prefs.language || 'en';
@@ -436,19 +440,13 @@ const DashboardPage = () => {
   const [moodHistory, setMoodHistory] = useState([]);
 
   useEffect(() => {
-    try {
-      const vibes = JSON.parse(localStorage.getItem(SAVED_VIBES_KEY) || '[]');
-      if (Array.isArray(vibes)) setSavedVibes(vibes);
-    } catch {}
-    try {
-      const watchedItems = JSON.parse(localStorage.getItem(WATCHED_KEY) || '[]');
-      if (Array.isArray(watchedItems)) setWatched(watchedItems);
-    } catch {}
-    try {
-      const readItems = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-      if (Array.isArray(readItems)) setReadBooks(readItems);
-    } catch {}
-  }, []);
+    const vibes = readUserScopedJson(SAVED_VIBES_KEY, userId, []);
+    const watchedItems = readUserScopedJson(WATCHED_KEY, userId, []);
+    const readItems = readUserScopedJson(READ_KEY, userId, []);
+    setSavedVibes(Array.isArray(vibes) ? vibes : []);
+    setWatched(Array.isArray(watchedItems) ? watchedItems : []);
+    setReadBooks(Array.isArray(readItems) ? readItems : []);
+  }, [userId]);
 
   useEffect(() => {
     let active = true;
@@ -509,13 +507,13 @@ const DashboardPage = () => {
   const handleRemoveWatched = (key) => {
     const next = watched.filter((item) => getItemKey(item) !== key);
     setWatched(next);
-    localStorage.setItem(WATCHED_KEY, JSON.stringify(next));
+    writeUserScopedJson(WATCHED_KEY, userId, next);
   };
 
   const handleRemoveRead = (key) => {
     const next = readBooks.filter((item) => getItemKey(item) !== key);
     setReadBooks(next);
-    localStorage.setItem(READ_KEY, JSON.stringify(next));
+    writeUserScopedJson(READ_KEY, userId, next);
   };
 
   return (
@@ -523,7 +521,7 @@ const DashboardPage = () => {
       <section className="dash-hero">
         <div className="dash-hero-copy">
           <span>{t('navDashboard')}</span>
-          <h1>{tr ? 'Mood arşivin, daha keskin bir sinyal gibi.' : 'Your mood archive, tuned like a signal.'}</h1>
+          <h1 className="text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{tr ? 'Mood arşivin, daha keskin bir sinyal gibi.' : 'Your mood archive, tuned like a signal.'}</h1>
           <p>{tr ? 'Son moodların, koleksiyonların ve zevk profilin tek premium yüzeyde.' : 'Recent moods, collections, and taste signals in one premium surface.'}</p>
         </div>
         <div className="dash-hero-metrics">

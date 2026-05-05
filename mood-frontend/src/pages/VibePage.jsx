@@ -3,11 +3,13 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BookDetailModal from '../components/BookDetailModal';
 import LoadingVibeState from '../components/LoadingVibeState';
+import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { REC_PREFS_DEFAULTS, useUserPreferences } from '../context/UserPreferencesContext';
 import useFavorites from '../hooks/useFavorites';
 import api from '../services/api';
 import { VIBE_PROMPT_EXAMPLES, getPromptSuggestions } from '../utils/constants';
+import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 import { readVibeListsSession, writeVibeListsSession } from '../utils/vibeSession';
 
 const SAVED_VIBES_KEY = 'moodflix.savedVibes';
@@ -30,6 +32,8 @@ const REFINE_ACTIONS = [
 
 const VibePage = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const userId = user?._id;
   const { vibeData, setVibe, colorKey, theme, setDraftMoodFromPrompt } = useMoodTheme();
   const { prefs, t } = useUserPreferences();
   const { favoriteMap, isFavorite, toggle } = useFavorites();
@@ -67,13 +71,9 @@ const VibePage = () => {
   const getItemId = (item) => item?.externalId || item?._id || item?.title;
 
   const getStoredIds = (key) => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(key) || '[]');
-      if (!Array.isArray(stored)) return new Set();
-      return new Set(stored.map((item) => item.externalId || item.title).filter(Boolean));
-    } catch {
-      return new Set();
-    }
+    const stored = readUserScopedJson(key, userId, []);
+    if (!Array.isArray(stored)) return new Set();
+    return new Set(stored.map((item) => item.externalId || item.title).filter(Boolean));
   };
 
   const filterAlreadyCollected = (items, extraKey, includeFavorites = true) => {
@@ -86,13 +86,9 @@ const VibePage = () => {
   };
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(SAVED_VIBES_KEY) || '[]');
-      if (Array.isArray(stored)) setSavedVibes(stored);
-    } catch {
-      // ignore
-    }
-  }, []);
+    const stored = readUserScopedJson(SAVED_VIBES_KEY, userId, []);
+    setSavedVibes(Array.isArray(stored) ? stored : []);
+  }, [userId]);
 
   // Sync per-section lists when a new vibe arrives
   useEffect(() => {
@@ -360,7 +356,7 @@ const VibePage = () => {
         (v) => !(v.prompt === vibeData.prompt && v.mood?.title === vibeData.mood?.title)
       );
       setSavedVibes(next);
-      localStorage.setItem(SAVED_VIBES_KEY, JSON.stringify(next));
+      writeUserScopedJson(SAVED_VIBES_KEY, userId, next);
       toast.success('Vibe removed');
       return;
     }
@@ -373,7 +369,7 @@ const VibePage = () => {
     };
     const next = [entry, ...savedVibes].slice(0, 30);
     setSavedVibes(next);
-    localStorage.setItem(SAVED_VIBES_KEY, JSON.stringify(next));
+    writeUserScopedJson(SAVED_VIBES_KEY, userId, next);
     toast.success('Vibe saved');
   };
 
@@ -381,37 +377,33 @@ const VibePage = () => {
     const id = getItemId(item);
     setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
     // Persist to watched list for Dashboard
-    try {
-      const existing = JSON.parse(localStorage.getItem(WATCHED_KEY) || '[]');
-      const entry = {
-        externalId: item.externalId || item.title,
-        title: item.title,
-        thumbnail: item.poster,
-        contentType: 'movie',
-        watchedAt: new Date().toISOString(),
-      };
-      if (!existing.some((w) => (w.externalId || w.title) === (entry.externalId || entry.title))) {
-        localStorage.setItem(WATCHED_KEY, JSON.stringify([entry, ...existing].slice(0, 100)));
-      }
-    } catch {}
+    const existing = readUserScopedJson(WATCHED_KEY, userId, []);
+    const entry = {
+      externalId: item.externalId || item.title,
+      title: item.title,
+      thumbnail: item.poster,
+      contentType: 'movie',
+      watchedAt: new Date().toISOString(),
+    };
+    if (!existing.some((w) => (w.externalId || w.title) === (entry.externalId || entry.title))) {
+      writeUserScopedJson(WATCHED_KEY, userId, [entry, ...existing].slice(0, 100));
+    }
   };
 
   const dismissBook = (item) => {
     const id = getItemId(item);
     setBookList((prev) => prev.filter((b) => getItemId(b) !== id));
-    try {
-      const existing = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-      const entry = {
-        externalId: item.externalId || item.title,
-        title: item.title,
-        thumbnail: item.poster,
-        contentType: 'book',
-        readAt: new Date().toISOString(),
-      };
-      if (!existing.some((b) => (b.externalId || b.title) === (entry.externalId || entry.title))) {
-        localStorage.setItem(READ_KEY, JSON.stringify([entry, ...existing].slice(0, 100)));
-      }
-    } catch {}
+    const existing = readUserScopedJson(READ_KEY, userId, []);
+    const entry = {
+      externalId: item.externalId || item.title,
+      title: item.title,
+      thumbnail: item.poster,
+      contentType: 'book',
+      readAt: new Date().toISOString(),
+    };
+    if (!existing.some((b) => (b.externalId || b.title) === (entry.externalId || entry.title))) {
+      writeUserScopedJson(READ_KEY, userId, [entry, ...existing].slice(0, 100));
+    }
   };
 
   const handlePromptChange = (value) => {
@@ -526,8 +518,8 @@ const VibePage = () => {
         />
 
         <div className="vibe-zero-hero-inner">
-          <div className="vibe-zero-copy">
-            <h1 className="zero-title">{heroHeadline}</h1>
+          <div className="vibe-zero-copy mx-auto flex w-full max-w-[58rem] flex-col items-center text-center">
+            <h1 className="zero-title text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]">{heroHeadline}</h1>
             <p className="zero-subtitle">{heroDescription}</p>
 
             <form
@@ -552,7 +544,7 @@ const VibePage = () => {
               </button>
             </form>
 
-            <div className="zero-prompt-board" aria-label={t('try')}>
+            <div className="zero-prompt-board w-full" aria-label={t('try')}>
               <span>{prefs.language === 'tr' ? 'Şu modda mısın?' : 'Are you in this mood?'}</span>
               <div className="zero-prompts">
                 {promptSuggestions.map((ex, index) => (
@@ -570,7 +562,7 @@ const VibePage = () => {
               </div>
             </div>
 
-            <div className="zero-refine">
+            <div className="zero-refine w-full">
               <button
                 type="button"
                 onClick={() => setRefineOpen((value) => !value)}
@@ -796,6 +788,7 @@ const VibePage = () => {
                           className={`cinema-track ${active ? 'is-active' : ''}`}
                           onClick={() => setActiveMovieId(getItemId(movie))}
                         >
+                          {movie.poster && <img className="cinema-track-poster" src={movie.poster} alt="" />}
                           <span className="cinema-track-num">{String(index + 1).padStart(2, '0')}</span>
                           <span className="cinema-track-name">{movie.title}</span>
                           {movie.genre && <span className="cinema-track-tag">{movie.genre}</span>}

@@ -204,10 +204,215 @@ npm run dev            # http://localhost:5173
 
 ---
 
+## 📌 GÜNCEL SİSTEM DURUMU
+
+- Uygulamanın ana authenticated akışı `login/register -> /vibe -> /dashboard /motivation /profile` şeklindedir.
+- Frontend ana sayfası artık `MoodInputPage` değil, protected `VibePage` akışıdır. `/` route'u `/vibe`'a redirect eder.
+- Frontend protected route'lar: `/vibe`, `/dashboard`, `/motivation`, `/moodboard`(dashboard'a yönlenir), `/profile`.
+- Auth sayfaları: `/login`, `/register`, `/signup`.
+- Backend'de aktif ek route grubu olarak `/api/motivation` vardır:
+  - `GET /api/motivation/summary`
+  - `POST /api/motivation/award`
+  - `POST /api/motivation/spring-review`
+- `MotivationPage` gerçek leaderboard mantığıyla çalışır; backend'deki kullanıcılar XP bazlı sıralanır.
+- Motivation görevleri hibrit ilerler:
+  - Mood check-in ve görev ödülleri backend'e yazılır.
+  - Sezon odası ilerlemesi, watched/read/saved vibe kayıtları frontend tarafında kullanıcıya özel storage'ta tutulur.
+- Spring/seasonal challenge tamamlanınca kullanıcı rating + emotion seçer; bu bilgi backend'de `User.motivation.springReviews` içine yazılır.
+- Tamamlanmış seasonal öğelerde yıldız puanı ve seçilen emotion kart üstünde tekrar gösterilir.
+- `VibePage` tek prompt üzerinden film/dizi, kitap ve müzik öneri yüzeyi üretir; TMDB detail zenginleştirmesi ve favori/watched/read etkileşimleri vardır.
+- `DashboardPage` kullanıcının kendi saved vibe, watched, read ve backend favorites verilerini bir araya getirir.
+- `ProfilePage` hesap, avatar, username ve recommendation preference merkezi olarak çalışır.
+- `MoodThemeContext` aktif vibe'a göre global tema/arka plan tonu üretir.
+- `UserPreferencesContext` dil, görünüm, full name ve recommendation preference değerlerini tutar.
+- Kritik not: kullanıcılar arası veri sızıntısını önlemek için frontend local storage verileri artık user-scoped key'lerle tutulmalıdır.
+
+### Kullanıcıya Özel Frontend Storage Anahtarları
+
+- `moodflix.preferences:<userId>`
+- `moodflix.savedVibes:<userId>`
+- `moodflix.watched:<userId>`
+- `moodflix.readBooks:<userId>`
+- `moodflix.gameState:<userId>`
+- `moodflix.seasonalProgress:<userId>`
+
+### Session / Persistence Davranışı
+
+- JWT `localStorage.token` altında tutulur.
+- Aktif vibe session verisi `sessionStorage` tabanlıdır (`vibeSession.js`).
+- Kullanıcı tercihleri ve kullanıcıya ait koleksiyon/progress verileri user-scoped `localStorage` altında tutulur.
+- Yeni kullanıcı kaydolduğunda veya başka kullanıcı giriş yaptığında önceki kullanıcının local progress, full name veya challenge state'i görünmemelidir.
+
+---
+
 ## 📝 CHANGE LOG
 
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
+
+### [2026-05-05] Vibe hero content centered in the rendered layout
+
+- **mood-frontend/src/pages/VibePage.jsx** — Centered the live Vibe hero content column in JSX so the main heading sits visually in the middle instead of drifting left.
+- **Implementation:** updated `vibe-zero-copy` with `mx-auto flex w-full max-w-[58rem] flex-col items-center text-center`, and gave `zero-prompt-board` / `zero-refine` `w-full` so the centered stack keeps its width consistently.
+
+### [2026-05-05] Hero headings unified to a smaller shared scale
+
+- **mood-frontend/src/pages/VibePage.jsx** — Reduced the Vibe hero `h1` and aligned it to the same shared size scale as the other main page headers.
+- **mood-frontend/src/pages/DashboardPage.jsx** — Added the same shared hero `h1` typography utilities used across the main pages.
+- **mood-frontend/src/pages/MotivationPage.jsx** — Increased the previously smaller Motivation `h1` to match the same shared hero scale so Vibe, Dashboard, and Motivation now read consistently.
+- **Shared heading scale used:** `text-[clamp(2.8rem,6vw,5.2rem)] leading-[0.9]`
+
+### [2026-05-05] Vibe hero heading restored to large page-header scale
+
+- **mood-frontend/src/pages/VibePage.jsx** — Increased the rendered Vibe hero `<h1>` size directly in JSX so the “What kind of scene are you in today?” heading matches the larger page-header scale used across the app.
+- **Implementation:** updated the `zero-title` heading with Tailwind typography utilities: `text-[clamp(3.8rem,8vw,7.6rem)] leading-[0.88]`.
+
+### [2026-05-05] Navbar width aligned with page shells
+
+- **mood-frontend/src/components/Navbar.jsx** — Updated the shared navbar content wrapper from `max-w-7xl` to `max-w-[92rem]` so the Vibe page header aligns with the same width used by Dashboard, Motivation, and other page shells.
+- **mood-frontend/src/components/Navbar.jsx** — Applied the same width change to the mobile drawer inner wrapper to keep desktop and mobile header sizing consistent.
+
+### [2026-05-05] CSS precedence fix — active page selectors lowered so JSX Tailwind can win normally
+
+- **mood-frontend/src/index.css** — Reduced selector precedence on active Motivation, Dashboard, Profile, and Vibe typography/spacing rules by switching live page selectors to low-specificity forms like `:where(.mot-v3-hero)`, `.mot-v3-copy :where(h1)`, `.dash-hero-copy :where(h1)`, `.profile-title-area :where(h2)`, and `:where(.zero-title)`.
+- **mood-frontend/src/index.css** — Merged the latest live Motivation and Dashboard values into the canonical active rules and removed one later typography-only Dashboard override block so the CSS cascade is less “last pass wins”.
+- **mood-frontend/src/index.css** — Lowered additional Vibe/Music/Cinema/Library heading and spacing selectors in mobile/alternate blocks so Tailwind spacing and type utilities in JSX are no longer forced to use `!important`.
+- **mood-frontend/src/pages/MotivationPage.jsx** — Removed the temporary `!py-4`, `md:!py-5`, and `!text-[...]` test classes after the CSS precedence cleanup, keeping the same visible test with normal Tailwind utilities.
+- **Verification:** ran `npm run build` in `mood-frontend/` successfully after the precedence cleanup.
+
+### [2026-05-05] Motivation hero test fix — component Tailwind forced past page CSS
+
+- **mood-frontend/src/pages/MotivationPage.jsx** — The initial hero styling test did not appear because active page CSS in `src/index.css` still overrides the component-level classes:
+  - `.mot-v3-hero` is defined multiple times and sets `padding` later in the cascade.
+  - `.mot-v3-copy h1` is defined multiple times and the later rule sets `font-size: clamp(2.3rem, 5.8vw, 5.5rem)`, overriding the plain Tailwind utility by selector specificity and source order.
+- **Fix applied:** upgraded the test classes to Tailwind important modifiers so the rendered component visibly wins without redesigning the page:
+  - `mot-v3-hero !py-4 md:!py-5`
+  - `!text-[clamp(1.75rem,4.4vw,4.1rem)]` on the hero `<h1>`
+- **Conclusion:** yes, there are still active CSS precedence issues left in the project, especially duplicated page-level selectors in `mood-frontend/src/index.css` that can override JSX utility classes.
+
+### [2026-05-05] Motivation hero styling test — component-level Tailwind override
+
+- **mood-frontend/src/pages/MotivationPage.jsx** — Added a small visible styling test directly on the rendered hero markup to confirm component-level class changes now apply without relying on global CSS.
+  - `section.mot-v3-hero` → `className="mot-v3-hero py-4 md:py-5"` to slightly reduce top/bottom spacing.
+  - Hero `<h1>` → added `className="text-[clamp(1.75rem,4.4vw,4.1rem)]"` to reduce the heading size by roughly 25% while keeping layout and logic unchanged.
+
+### [2026-05-05] Final controlled styling audit — risky active selectors simplified
+
+- **mood-frontend/src/index.css** — Final audit focused only on still-active risky selectors: broad `.app-shell` / `.theme-dark` theme overrides, utility-targeting selectors, remaining `!important`, and active Vibe tuning blocks that can make Tailwind edits feel ineffective.
+- **Removed dead active-theme selectors:** deleted unused theme wrappers for `.app-shell .card`, `.app-shell .card-flat`, `.app-shell .btn-accent`, `.app-shell .chip-accent`, and `.app-shell .mood-hero-input` after confirming they are no longer used in JSX.
+- **Safe simplifications applied:** removed unnecessary `!important` from active selectors whose higher specificity already guarantees the same visual result:
+  - `.app-shell .input`, `.app-shell .btn-primary`, `.app-shell .section-eyebrow`
+  - `.modal-surface` and `.modal-surface .text-ink-*`
+  - `.app-shell .bg-white*`, `.app-shell .border-ink-*`
+  - `.theme-dark .text-ink-*`, `.theme-dark .bg-ink-*`, `.theme-dark .btn-secondary`
+- **Broad selector narrowed safely:** `.app-shell header.sticky` was narrowed to `.app-shell .navbar-root.sticky` so the sticky-header theming only targets the real navbar instead of any sticky header inside the app shell.
+- **Intentionally kept risky selectors:** Vibe visibility safety rules (`opacity/filter/animation/transform !important`), reduced-motion `!important` guards, and cinema rail layout overrides (`display/padding !important`) were left untouched because they still control active UI behavior and need visual testing before any removal.
+- **Build:** `cd mood-frontend && npm run build` → successful (`vite build`, 110 modules transformed, `dist/assets/index-BAubVIn9.css` 170.69 kB, no errors).
+
+### [2026-05-05] Styling audit continuation — remaining dead selector families removed
+
+- **mood-frontend/src/index.css** — Full remaining-style audit continued beyond `!important`, focusing on dead selectors, repeated responsive remnants, old override fragments, and duplicated footer/theme leftovers. Cleanup kept visual design intact and only touched HIGH-confidence unused CSS.
+- **Removed unused Vibe remnants:** deleted orphaned responsive/layout selectors for `.zero-stage`, `.zero-control-flow`, `.zero-stage-copy`, `.cinema-gallery-field`, `.zero-kicker`, and `library-track*` remnants that no longer appear in JSX.
+- **Removed unused Motivation remnants:** deleted old responsive blocks targeting prior layout generation selectors such as `.mot-hero`, `.mot-topology`, `.mot-midgrid`, `.mot-bottomgrid`, `.mot-checkin-layout`, `.mot-room-layout`, `.mot-mood-grid`, `.mot-level-console`, `.mot-streak`, `.mot-mood-token`, `.mot-streak-meter`, `.mot-quest-row`, `.mot-leader-list`.
+- **Removed unused Profile remnants:** deleted dead wrapper selectors `.profile-field .input`, `.profile-card .input`, `.profile-password-form .input` and removed unused old responsive profile layout fragments tied to non-rendered wrapper classes.
+- **Removed duplicated footer remnants:** deleted obsolete `app-footer-links` responsive handling and removed duplicate earlier footer-responsive blocks so the active footer behavior now lives in one place.
+- **Merged/simplified active selectors:** trimmed dead selector fragments out of mixed active rules such as `.theme-light` cinema/sound state selectors and the `vibe-zero-shell` display-font grouping, leaving only selectors that still map to rendered markup.
+- **Left intentionally untouched:** broad theme-layer overrides using `.app-shell`, utility-targeting selectors like `.bg-white` / `.text-ink-*`, most remaining `!important` rules, and repeated Vibe/Dashboard/Motivation visual tuning blocks that still affect active markup and would need visual regression review before consolidation.
+- **Build:** `cd mood-frontend && npm run build` → successful (`vite build`, 110 modules transformed, `dist/assets/index-CQ6GvFJG.css` 171.44 kB, no errors).
+
+### [2026-05-05] Styling system cleanup logged in CLAUDE
+
+- **mood-frontend/src/index.css** — Frontend styling system cleanup documented: global CSS reorganized around `:root`, `@layer base`, `@layer components`, and `@layer utilities` so shared theme/app styles are easier to reason about and no longer rely on scattered bottom-of-file override labeling.
+- **mood-frontend/src/index.css** — High-confidence dead navbar selector generations removed after verification against active JSX: legacy `.nav-shell`, `.nav-rail`, `.nav-link`, `.nav-utility`, `.nav-profile-chip`, `.nav-mobile-toggle`, `.nav-mobile-link`, `.nav-mobile-panel`, `.nav-cta`, and related theme variants were deleted because the live navbar uses `navbar-root`, `nav-item`, `nav-util-btn`, `nav-mobile-item`, `nav-cta-btn`, etc.
+- **mood-frontend/src/index.css** — Duplicate/conflicting styling reduced: one duplicate `.app-shell .toggle:checked` override removed; surviving active navbar styles consolidated into a single section; old “override/pass/end-of-cascade” comments cleaned up to make the file structure more predictable for future edits.
+- **mood-frontend/src/index.css** — Broad theme override rules that intentionally skin shared primitives (`.card`, `.input`, `.btn-*`, `.modal-surface`, some `bg-white` / `text-ink-*` / `border-ink-*` cases) were kept because they still control visible themed UI. These remain a known styling risk area and were not deleted without visual re-audit.
+- **mood-frontend/CLAUDE.md** — This changelog entry added to record the cleanup per project policy.
+- **Build:** `cd mood-frontend && npm run build` → successful (`vite build`, 110 modules transformed, no errors).
+
+### [2026-05-05] CSS consolidation — duplicate top-level override blocks merged
+
+- **mood-frontend/src/index.css** — 79 lines removed (8,143 → 8,064). Zero UI impact. CSS output: 181.79kB → 180.40kB. All consolidated selectors verified: final cascade-winning values computed and folded into the original canonical block; later duplicates deleted.
+  - **`.cinema-stage`** — 3 top-level definitions (lines 1003, 6404, 7669) → 1 canonical. Final values: 2-col grid with `grid-template-areas: "poster info" / "rail rail"`, `align-items: start`, `padding: 1.6rem 0 1.4rem`. Deleted intermediate (6404) and late (7669) blocks. `@media` responsive overrides at 900px and 720px left untouched.
+  - **`.library-stage`** — 3 top-level definitions (lines 1539, 6735, 7107) → 1 canonical. Final values: 2-col `minmax(460px, 1fr) minmax(260px, 0.44fr)`. Deleted intermediate (6735) and late (7107) blocks.
+  - **`.zero-prompts`** — 5 top-level definitions (687, 1734, 2333, 6079, 7031) → 1 canonical. Final values: `display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.62rem`. Deleted 4 later blocks. `@media (max-width: 720px)` override left untouched.
+  - **`.zero-command`** — 5 top-level definitions (623, 2028, 2309, 6041, 6979) → 1 canonical. Final merged values include `position: relative`, `grid-template-columns: auto 1fr auto`, `gap: 0.7rem`, `width: min(100%, 58rem)`, `max-width: 58rem`, `margin: 1.75rem auto 0`, `border-radius: 1.35rem`, `padding: 0.55rem 0.65rem`, gradient background, box-shadow. Deleted 4 later blocks. `.theme-dark .zero-command` override left untouched.
+  - **`.zero-prompt-board, .zero-refine, .zero-intensity` group** — 3 top-level definitions (2038, 6043, 8057) → 1 canonical. Final values: `width: min(100%, 58rem); max-width: 58rem; margin-left: auto; margin-right: auto`. Deleted 2 later blocks (including the 4-selector group at 8057 that also contained `.zero-command`).
+- **Intentionally left unchanged:** `.zero-prompt` (base selector has a group selector at line 693 with `.zero-refine-toggle, .zero-refine-panel button` — splitting risky); all `@media` responsive overrides; all `.theme-dark` / `.theme-light` parent-selector rules.
+- **Build:** `vite build` → clean, 110 modules, 180.40kB CSS, 324.70kB JS, zero errors.
+
+### [2026-05-05] CSS dead code — HIGH confidence unused rules removed
+
+- **mood-frontend/src/index.css** — 82 lines removed (8,225 → 8,143). Zero UI impact. CSS output: 182.77kB → 181.79kB. All deletions verified against JSX before removal.
+  - `@media (max-width: 767px)` block: removed `.mood-studio`, `.mood-studio-visual`, `.mood-hero-poster-wall`, `.hero-poster-front`, `.cinema-dome-stage`, `.cinema-dome-copy`, `.cinema-dome-gallery`, `.cinema-reflective-panel` — all orphaned responsive overrides for layout classes no longer in any JSX file.
+  - `@media (max-width: 1024px)` group selector: removed `,\n  .cinema-runway,\n  .reading-runway` entries from a shared `grid-template-columns: 1fr` rule. Kept `.sound-runway` (active in VibePage.jsx).
+  - Standalone `.cinema-runway { min-height: auto; }` block deleted.
+  - `@media (max-width: 720px)` block: removed `.book-cover-stream` and `.book-cover-stream button` — the component was deleted in the 2026-05-05 dead code cleanup pass; responsive overrides were orphaned.
+  - `@media (max-width: 1024px)` and `@media (max-width: 720px)` blocks: removed `.mood-dossier-note`, `.mood-dossier-label`, `.mood-dossier-label span` — layout classes for an old `.zero-manifesto` column design, replaced by `.mood-orbital-card`. No JSX references anywhere.
+- **Skipped (intentionally):** `.spring-review-*` — audit agent flagged as unused but active in MotivationPage.jsx (lines 256–304). All MEDIUM confidence candidates deferred pending visual review.
+- **Build:** `vite build` → clean, 110 modules, 181.79kB CSS, 324.70kB JS, zero errors.
+
+### [2026-05-05] Sizing consistency pass — all pages aligned to Dashboard proportions
+
+- **mood-frontend/src/index.css** — New override block appended at end of cascade. Changes:
+  - `.vibe-zero-hero`: `padding-top/bottom` reduced from `clamp(3rem,7vw,6rem)` to `clamp(2rem,5vw,4rem)` (less vertical whitespace); `padding-inline: clamp(1rem,4vw,3rem)` added (matches dashboard's horizontal gutter).
+  - `.vibe-zero-copy`: `width/max-width` increased from `920px` to `80rem` so the hero copy fills the container like dashboard panels do (~920px → ~1280px max).
+  - `.vibe-zero-copy .zero-title`: `max-width` relaxed from `11ch` to `18ch`, allowing the display headline to span wider lines.
+  - `.zero-command`, `.zero-prompt-board`, `.zero-refine`, `.zero-intensity`: `width/max-width` increased from `820px` to `58rem` (~928px).
+  - `.vibe-zero-results`: `max-width` changed from `1480px` to `92rem`; `padding-inline: clamp(1rem,4vw,3rem)`; `padding-bottom: 5rem` (matches dashboard).
+  - `.profile-studio-v2`: `max-width` bumped from `86rem` to `92rem`; `padding-inline: clamp(1rem,4vw,3rem)` added.
+- **Build:** `vite build` → clean, 182.77kB CSS, 324.70kB JS, zero errors.
+
+### [2026-05-05] Navbar full redesign — Apple/Notion/Linear style
+
+- **mood-frontend/src/components/Navbar.jsx** — Complete rewrite. Replaced all custom nav-* CSS classes with a new class vocabulary (`navbar-root`, `nav-item`, `nav-item-active`, `nav-avatar-btn`, `nav-util-btn`, `nav-cta-btn`, `nav-hamburger`, `nav-mobile-drawer`, `nav-mobile-item`, `nav-mobile-item-active`). Layout changes: `sticky top-0` header, `h-14 max-w-7xl px-6` inner container, `flex-1 justify-center gap-1` nav rail. Active state: filled pill with 8% ink background + semibold text. Profile avatar: 2rem circle with focus ring. Sign-out: bordered ghost button. Mobile drawer: clean stacked links with `space-y-0.5` padding.
+- **mood-frontend/src/index.css** — `.nav-brand-mark` updated: `border-radius 999px → 0.45rem` (rounded square), size shrunk to `1.85rem`. Box-shadow removed. New block appended at end of cascade with all new navbar class definitions (`.navbar-root`, `.nav-item`, `.nav-item-active`, etc.) including full dark-mode (`.theme-dark`) overrides for each.
+- **Build:** `vite build` → clean, 182.28kB CSS, 324.70kB JS, zero errors.
+
+### [2026-05-05] Navbar brand subtitle fix
+
+- **mood-frontend/src/components/Navbar.jsx** — `nav-brand-mood` subtitle now only renders when `vibeData?.mood?.title` exists. Previously it always showed a value (falling back to `'Melancholic reflections'`), which caused the current vibe name (e.g. "UNSENT WHISPERS") to appear as a permanent sub-brand below "Luma" even when no vibe was active.
+
+### [2026-05-05] CSS dead code cleanup — 3,235 lines / 369 rule blocks removed
+
+- **mood-frontend/src/index.css** — Surgical removal of CSS rule blocks whose selectors were entirely composed of unused class names (no matching `className` in any JSX file). 169 unused class families identified via diff, 369 rule blocks removed.
+- Removed class families: `book-card-shell`, `book-page-*`, `book-reading-room`, `cinema-dome-*`, `cinema-runway`, `cinema-reflective-*`, `hero-floater-*`, `hero-poster-*`, `library-bookplate`, `library-cover`, `library-tracklist`, `mood-atmosphere`, `mood-aurora-band`, `mood-command-panel`, `mood-console`, `mood-dossier-*`, `mood-energy-grid`, `mood-studio-*`, `mood-pulse-ring-*`, `mot-hero`, `mot-battle-*`, `mot-room`, `mot-streak-*`, `mot-topology`, `music-card`, `record-disc`, `record-vinyl`, `open-book-*`, `profile-card`, `profile-editor`, `profile-layout`, `profile-passport`, `profile-pref-card`, `profile-shell`, `reading-*`, `results-floater-*`, `route-transition`, `section-surge`, `storybook-page-list`, `theme-dark/light`, `vibe-page-shell`, `vibe-results-flow`, `vibe-section-*`, `zero-poster-*`, `zero-stage-*`, `app-footer-brand`, `app-shell`, `auth-main`, `auth-media-track-*`, `nav-link`, `ambient-mood-orb-*`, and more.
+- Second pass removed 21 additional compound-selector rule blocks (e.g., `.library-track.is-active`, `.mot-quest-row.is-done`) missed in first pass.
+- **Before:** 11,287 lines, 237.42kB CSS output. **After:** 7,952 lines, 178.94kB CSS output (−30% lines, −25% output size).
+- Build: `vite build` → clean, zero errors, JS unchanged at 325kB.
+
+### [2026-05-05] Dead code cleanup — 19 unused component/hook files deleted
+
+- **Silinen component'lar (17 adet):** `BookCard.jsx`, `CircularGallery.jsx`, `CircularGallery.css`, `EmptyState.jsx`, `FilmDetailModal.jsx`, `IntensityBar.jsx`, `MoodSummary.jsx`, `MoodSummaryCard.jsx`, `MoodboardGrid.jsx`, `MovieCard.jsx`, `MovieDetailModal.jsx`, `MusicCard.jsx`, `SectionHeader.jsx`, `SkeletonCard.jsx`, `StreakCounter.jsx`, `WeeklyMoodChart.jsx`, `SaveVibeButton.jsx` — hiçbiri herhangi bir sayfada veya aktif component'ta import edilmiyordu.
+- **Silinen hook'lar (2 adet):** `useDebounce.js`, `usePagination.js` — proje genelinde import edilmiyordu.
+- **Neden:** Bu dosyaların tamamı geçmiş UI iterasyonlarından kalan ve mevcut sayfa/component akışıyla entegre edilmemiş dead code'du. VibePage, DashboardPage ve MotivationPage tüm içerik render'ını inline JSX ile yapıyor.
+- **Build:** `vite build` → clean, 110 modules (önceki 912'den), 237.42kB CSS, 325kB JS. Sıfır error.
+
+### [2026-05-04] UI refinement pass — typography scale, cinema carousel, section spacing
+
+- **mood-frontend/src/index.css** — Large CSS override block appended at the END of the file (cascade priority). Changes:
+  - Typography reduction ~25–30%: `.zero-title` max 3.4rem (was 5.4rem), `.zero-manifesto h2` max 3.6rem (was 12rem), `.zero-chapter-head h2` max 3rem (was 5.35rem), `.sound-focus-text h3` max 2.2rem (was 6.8rem), `.cinema-info-title` and `.library-info-title` max 2.6rem, `.mood-orbital-copy h2` max 2.4rem, `.dash-hero-copy h1` max 3.4rem, `.dash-hero-metrics strong` max 3.4rem, `.dash-dominant-mood strong` max 3.4rem.
+  - Cinema section layout changed from 3-col (tracklist | podium | info) to 2-row (featured poster + info on top, horizontal scroll carousel on bottom). Used `grid-template-areas` with `"poster info" / "rail rail"`.
+  - `.cinema-tracklist`: converted from vertical numbered list to `display: flex; overflow-x: auto` horizontal thumbnail scroll. No scrollbar visible. Responsive at 900px and 720px.
+  - `.cinema-track`: restyled as 78×117px thumbnail card with absolute-positioned number badge and title overlay gradient. Hover: `translateY(-5px) scale(1.05)` + mood accent border.
+  - `.cinema-card-carousel`: hidden (`display: none`) to remove overlapping 3-D card visual noise.
+  - Section spacing tightened: `.zero-chapter` padding, `.zero-chapter-head` margin, `.zero-manifesto` padding.
+  - Prompt suggestion chips: lighter border/background opacity.
+  - Sound playlist rows: min-height reduced to 3.6rem, track title font-size reduced.
+- **mood-frontend/src/pages/VibePage.jsx** — Added `{movie.poster && <img className="cinema-track-poster" src={movie.poster} alt="" />}` inside each `cinema-track` button so thumbnail images appear in the horizontal carousel.
+- **Build:** `vite build` → clean, 264.20kB CSS, 325kB JS. Zero errors.
+
+### [2026-05-04] Current system state documented + user-scoped persistence fix
+
+- **CLAUDE.md** — Bu dosyaya güncel route yapısı, aktif sayfa akışı, motivation sistemi ve user-scoped storage mimarisi eklendi; böylece proje durumu daha doğru şekilde kalıcı hale getirildi.
+- **mood-frontend/src/utils/userStorage.js** — Yeni helper dosyası eklendi. `localStorage` verileri kullanıcı bazlı key (`<baseKey>:<userId>`) ile okunup yazılabiliyor.
+- **mood-frontend/src/context/UserPreferencesContext.jsx** — Tercihler artık global `moodflix.preferences` yerine kullanıcıya özel storage altında tutuluyor. `fullName`, dil, tema ve recommendation prefs kullanıcı değişince doğru state ile yeniden yükleniyor.
+- **mood-frontend/src/pages/MotivationPage.jsx** — `gameState`, `savedVibes`, `watched`, `readBooks`, `seasonalProgress` verileri kullanıcıya özel hale getirildi. Yeni kullanıcı artık başka bir kullanıcının seasonal progress veya challenge verisini görmüyor.
+- **mood-frontend/src/pages/MotivationPage.jsx** — Tamamlanmış seasonal öğelerde backend'den gelen `springReviews` kullanılarak yıldız puanı ve emotion etiketi kart üstünde gösterilmeye başlandı.
+- **mood-frontend/src/pages/MotivationPage.jsx** — Tamamlanmış öğeye tekrar tıklanınca mevcut review rating/emotion modal içine geri yükleniyor; kullanıcı düzenleme hissi korunuyor.
+- **mood-frontend/src/pages/VibePage.jsx** — `savedVibes`, `watched`, `readBooks` verileri kullanıcı bazlı storage'a taşındı; bir hesabın içerik arşivi diğer hesaba sızmıyor.
+- **mood-frontend/src/pages/DashboardPage.jsx** — Dashboard koleksiyonları artık aktif kullanıcıya ait scoped storage'dan okunuyor ve silme işlemleri de aynı scope'a yazılıyor.
+- **Davranış düzeltmesi** — Yeni kullanıcı kaydında varsayılan olarak başka bir kullanıcının adı veya yerel verileri görünmemeli. Özellikle "Berk Ates/Berk Ateş" benzeri eski local preference/state yansımaları bu güncellemeyle kesildi.
+- **Doğrulama** — `mood-frontend` içinde `npm run build` çalıştırıldı; build başarılı.
 
 ### [2026-04-30] Cinema section full redesign — "The Grand Screening Room"
 
