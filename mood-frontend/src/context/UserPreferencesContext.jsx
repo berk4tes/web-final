@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from './AuthContext';
 import { translate } from '../utils/i18n';
+import { readUserScopedJson, writeUserScopedJson } from '../utils/userStorage';
 
 export const PREFS_KEY = 'moodflix.preferences';
 
@@ -20,32 +22,29 @@ const DEFAULT_PREFS = {
   recPrefs: REC_PREFS_DEFAULTS,
 };
 
-const readPrefs = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
-    return {
-      ...DEFAULT_PREFS,
-      ...stored,
-      recPrefs: { ...REC_PREFS_DEFAULTS, ...(stored.recPrefs || {}) },
-    };
-  } catch {
-    return DEFAULT_PREFS;
-  }
-};
+const normalizePrefs = (stored = {}) => ({
+  ...DEFAULT_PREFS,
+  ...stored,
+  recPrefs: { ...REC_PREFS_DEFAULTS, ...(stored.recPrefs || {}) },
+});
+
+const readPrefs = (userId) => normalizePrefs(readUserScopedJson(PREFS_KEY, userId, {}));
 
 const UserPreferencesContext = createContext(null);
 
 export const UserPreferencesProvider = ({ children }) => {
-  const [prefs, setPrefs] = useState(readPrefs);
+  const { user } = useAuth();
+  const userId = user?._id;
+  const [prefs, setPrefs] = useState(() => readPrefs(userId));
+
+  useEffect(() => {
+    setPrefs(readPrefs(userId));
+  }, [userId]);
 
   const savePrefs = (next) => {
-    const normalized = {
-      ...DEFAULT_PREFS,
-      ...next,
-      recPrefs: { ...REC_PREFS_DEFAULTS, ...(next.recPrefs || {}) },
-    };
+    const normalized = normalizePrefs(next);
     setPrefs(normalized);
-    localStorage.setItem(PREFS_KEY, JSON.stringify(normalized));
+    writeUserScopedJson(PREFS_KEY, userId, normalized);
   };
 
   useEffect(() => {

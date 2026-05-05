@@ -250,6 +250,12 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-05] Frontend cleanup commit — removed deleted files from the repo
+
+- **mood-frontend/src/components/** — Recorded the removal of unused deleted frontend component files from the repository, including `BookCard.jsx`, `CircularGallery.css`, `CircularGallery.jsx`, `EmptyState.jsx`, `FilmDetailModal.jsx`, `IntensityBar.jsx`, `MoodSummary.jsx`, `MoodSummaryCard.jsx`, `MoodboardGrid.jsx`, `MovieCard.jsx`, `MovieDetailModal.jsx`, `MusicCard.jsx`, `SaveVibeButton.jsx`, `SectionHeader.jsx`, `SkeletonCard.jsx`, `StreakCounter.jsx`, and `WeeklyMoodChart.jsx`.
+- **mood-frontend/src/hooks/** — Recorded the removal of deleted helper hooks `useDebounce.js` and `usePagination.js`.
+- **mood-frontend/src/context/UserPreferencesContext.jsx** and **mood-frontend/src/utils/userStorage.js** — Included the remaining local preference/storage changes in the same full cleanup commit so the repo state matches the current workspace.
+
 ### [2026-05-05] Vibe hero content centered in the rendered layout
 
 - **mood-frontend/src/pages/VibePage.jsx** — Centered the live Vibe hero content column in JSX so the main heading sits visually in the middle instead of drifting left.
