@@ -478,29 +478,9 @@ const VibePage = () => {
   const heroDescription = prefs.language === 'tr'
     ? 'Bir his yaz; sana uygun şarkı, film ve kitabı aynı atmosferde bulalım.'
     : 'Write one feeling; get songs, films, and books in the same atmosphere.';
-  const sceneCopy = {
-    music: {
-      eyebrow: prefs.language === 'tr' ? 'dinlenecekler' : 'listening room',
-      title: prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`,
-      caption: prefs.language === 'tr'
-        ? 'Bu moodun ritmini, temposunu ve arka plandaki küçük sızılarını taşıyan seçimler.'
-        : 'Tracks that carry the tempo, texture, and quiet ache of this mood.',
-    },
-    cinema: {
-      eyebrow: prefs.language === 'tr' ? 'izlenecekler' : 'screening room',
-      title: prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`,
-      caption: prefs.language === 'tr'
-        ? 'Bu hissin ışığına, gölgesine ve temposuna benzeyen film ve diziler.'
-        : 'Films and series matched to the light, shadow, and pace of this feeling.',
-    },
-    books: {
-      eyebrow: prefs.language === 'tr' ? 'okunacaklar' : 'reading room',
-      title: prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`,
-      caption: prefs.language === 'tr'
-        ? 'Bu ruh halinin içinde açılacak sayfalar; biraz kapak, biraz kenar notu, biraz kaçış.'
-        : 'Pages to open inside this mood: part cover, part margin note, part escape.',
-    },
-  };
+  const musicSceneTitle = prefs.language === 'tr' ? `${moodTitle} için şarkılar` : `Songs for ${moodTitle}`;
+  const cinemaSceneTitle = prefs.language === 'tr' ? `${moodTitle} perdesinde` : `On the ${moodTitle} screen`;
+  const booksSceneTitle = prefs.language === 'tr' ? `${moodTitle} rafı` : `The ${moodTitle} shelf`;
   return (
     <div className="vibe-zero-shell">
       <section className="vibe-zero-hero" style={{ '--mood-accent-live': accent }}>
@@ -696,10 +676,8 @@ const VibePage = () => {
 
             {selectedScene === 'music' && recPrefs.showMusic && shownMusic.length > 0 && (
               <section className="zero-chapter zero-music" style={{ '--mood-accent-live': accent }}>
-                <header className="zero-chapter-head">
-                  <span>{sceneCopy.music.eyebrow}</span>
-                  <h2>{sceneCopy.music.title}</h2>
-                  <p>{sceneCopy.music.caption}</p>
+                <header className="zero-chapter-head grid-cols-1">
+                  <h2 className="whitespace-nowrap text-[clamp(2.9rem,4.7vw,5rem)] leading-[0.9]">{musicSceneTitle}</h2>
                 </header>
 
                 <div className="sound-runway">
@@ -709,8 +687,7 @@ const VibePage = () => {
                     </div>
                     <div className="sound-focus-text">
                       <span>{String(shownMusic.findIndex((item) => getItemId(item) === getItemId(activeMusic)) + 1).padStart(2, '0')}</span>
-                      <h3>{activeMusic?.title}</h3>
-                      <p>{activeMusic?.aiExplanation || getMusicArtist(activeMusic) || t('playlistCaption')}</p>
+                      <h3 className="whitespace-nowrap text-[clamp(2.8rem,4.8vw,4.9rem)] leading-[0.84]">{activeMusic?.title}</h3>
                       <div>
                         <a href={getMusicSearch(activeMusic, 'spotify')} target="_blank" rel="noreferrer">Spotify</a>
                         <a href={getMusicSearch(activeMusic, 'apple')} target="_blank" rel="noreferrer">Apple Music</a>
@@ -769,10 +746,8 @@ const VibePage = () => {
                   <div className="cinema-sprockets" />
                 </div>
 
-                <header className="zero-chapter-head">
-                  <span>{sceneCopy.cinema.eyebrow}</span>
-                  <h2>{sceneCopy.cinema.title}</h2>
-                  <p>{sceneCopy.cinema.caption}</p>
+                <header className="zero-chapter-head grid-cols-1">
+                  <h2>{cinemaSceneTitle}</h2>
                 </header>
 
                 {/* 3-col stage: tracklist | poster+ticket | info */}
@@ -887,7 +862,7 @@ const VibePage = () => {
                           {prefs.language === 'tr' ? 'perdeye yansıyan seçim' : 'projected pick'}
                         </span>
                         <h3>{projectedMovie.title}</h3>
-                        <p>{projectedMovie.aiExplanation || projectedMovie.overview || sceneCopy.cinema.caption}</p>
+                        <p>{projectedMovie.aiExplanation || projectedMovie.overview}</p>
                         <div className="cinema-projection-stats">
                           {projectedMovie.rating && <span>IMDb {projectedMovie.rating}</span>}
                           {projectedMovie.runtime && <span>{projectedMovie.runtime} min</span>}
@@ -980,10 +955,8 @@ const VibePage = () => {
 
                 <div className="library-shelf" aria-hidden />
 
-                <header className="zero-chapter-head">
-                  <span>{sceneCopy.books.eyebrow}</span>
-                  <h2>{sceneCopy.books.title}</h2>
-                  <p>{sceneCopy.books.caption}</p>
+                <header className="zero-chapter-head grid-cols-1">
+                  <h2>{booksSceneTitle}</h2>
                 </header>
 
                 <div className="library-stage">

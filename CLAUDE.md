@@ -250,6 +250,34 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-05] Music sleeve expanded again and scene title forced to one line
+
+- **mood-frontend/src/pages/VibePage.jsx** — Forced the music scene section title onto one line with `whitespace-nowrap` and a tighter responsive size clamp.
+- **mood-frontend/src/index.css** — Expanded the dark `sound-runway` sleeve farther to the right so the divider now lands after the full action-button group, including `Add favorite`.
+- **mood-frontend/src/index.css** — Updated the light and dark sleeve gradient split plus the divider position to match the wider left-side panel.
+
+### [2026-05-05] Music panel balanced — one-line title and wider dark sleeve area
+
+- **mood-frontend/src/pages/VibePage.jsx** — Updated the active music title to stay on a single line by applying `whitespace-nowrap` and a slightly tighter responsive size scale.
+- **mood-frontend/src/index.css** — Expanded the dark left side of the `sound-runway` panel so the action buttons, including `Add favorite`, sit inside the dark sleeve area more naturally.
+- **mood-frontend/src/index.css** — Moved the visual divider to match the new split and removed the old narrow title max-width so the single-line title can fit cleanly.
+
+### [2026-05-05] Vibe scene copy removed so only section titles remain
+
+- **mood-frontend/src/pages/VibePage.jsx** — Removed the `sceneCopy` object entirely and replaced it with direct scene-title constants for music, cinema, and books.
+- **mood-frontend/src/pages/VibePage.jsx** — Simplified the music, cinema, and books section headers so they render only the `<h2>` title and no eyebrow/caption text.
+- **mood-frontend/src/pages/VibePage.jsx** — Removed the `sceneCopy.cinema.caption` fallback from the projected movie description so the deleted scene-copy text no longer appears anywhere in that panel.
+
+### [2026-05-05] Light mode music title set to white for readability
+
+- **mood-frontend/src/index.css** — Added a scoped light-mode override for the active music title in the `zero-music` panel so the song heading stays white against the dark record-side background.
+- **Implementation:** added `.theme-light .zero-music .sound-focus-text :where(h3) { color: #fff8ed; }` without changing other light-mode heading colors.
+
+### [2026-05-05] Active music title enlarged and description removed
+
+- **mood-frontend/src/pages/VibePage.jsx** — In the active music detail block (`sound-focus-text`), removed the descriptive paragraph under the track title and increased the title size directly in JSX.
+- **Implementation:** updated the song `<h3>` to `className="text-[clamp(3.4rem,7vw,6.2rem)] leading-[0.84]"` while leaving theme-driven light/dark colors untouched so each mode keeps its own palette.
+
 ### [2026-05-05] Frontend cleanup commit — removed deleted files from the repo
 
 - **mood-frontend/src/components/** — Recorded the removal of unused deleted frontend component files from the repository, including `BookCard.jsx`, `CircularGallery.css`, `CircularGallery.jsx`, `EmptyState.jsx`, `FilmDetailModal.jsx`, `IntensityBar.jsx`, `MoodSummary.jsx`, `MoodSummaryCard.jsx`, `MoodboardGrid.jsx`, `MovieCard.jsx`, `MovieDetailModal.jsx`, `MusicCard.jsx`, `SaveVibeButton.jsx`, `SectionHeader.jsx`, `SkeletonCard.jsx`, `StreakCounter.jsx`, and `WeeklyMoodChart.jsx`.
