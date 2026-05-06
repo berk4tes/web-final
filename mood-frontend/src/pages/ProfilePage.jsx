@@ -17,7 +17,7 @@ const REC_PREF_GROUPS = [
 
 const PROFILE_STATS = [
   { label: { en: 'Mood DNA', tr: 'Mood DNA' }, value: { en: 'Cinematic', tr: 'Sinematik' } },
-  { label: { en: 'Discovery mode', tr: 'Keşif modu' }, value: { en: 'Curated', tr: 'Kürasyon' } },
+  { label: { en: 'Mode', tr: 'Mod' }, value: { en: 'Curated', tr: 'Kürasyon' } },
 ];
 
 const compressAvatarFile = (file) => new Promise((resolve, reject) => {
@@ -25,7 +25,6 @@ const compressAvatarFile = (file) => new Promise((resolve, reject) => {
     reject(new Error('Please choose an image file'));
     return;
   }
-
   const reader = new FileReader();
   reader.onload = () => {
     const image = new Image();
@@ -139,7 +138,7 @@ const ProfilePage = () => {
     ev.preventDefault();
     if (pwForm.next.length < 6) { toast.error(tr ? 'Şifre en az 6 karakter olmalı' : 'Password must be at least 6 characters'); return; }
     if (pwForm.next !== pwForm.confirm) { toast.error(tr ? 'Şifreler eşleşmiyor' : 'Passwords do not match'); return; }
-    toast(tr ? 'Şifre değişimi için backend desteği yakında.' : 'Password change requires backend support - coming soon.');
+    toast(tr ? 'Şifre değişimi için backend desteği yakında.' : 'Password change requires backend support — coming soon.');
     setShowPwChange(false);
     setPwForm({ current: '', next: '', confirm: '' });
   };
@@ -171,220 +170,239 @@ const ProfilePage = () => {
   const initials = useMemo(() => (user?.username?.[0] || 'U').toUpperCase(), [user]);
 
   return (
-    <div className="profile-studio profile-studio-v2">
-      <form onSubmit={handleProfileSave} className="profile-flow">
-        <section className="profile-hero-band">
-          <div className="profile-passport-slim">
-            <span className="profile-kicker">Mood passport</span>
-            <div className="profile-persona">
+    <div className="profile-studio profile-studio-v3">
+      <form onSubmit={handleProfileSave} className="pv3-shell">
+
+        {/* ── HERO CARD ── */}
+        <div className="profile-card pv3-hero-card">
+
+          {/* Left: passport panel */}
+          <div className="pv3-passport">
+            <span className="pv3-passport-eyebrow">Mood passport</span>
+            <div className="pv3-passport-avatar">
               <UserAvatar
                 value={form.avatar}
                 name={user?.username || initials}
-                className="profile-avatar"
+                className="pv3-avatar-hero"
                 onError={() => setAvatarError(true)}
               />
-              <div className="min-w-0">
-                <h1>{form.fullName || user?.username}</h1>
-                <p>@{user?.username}</p>
-                <p>{user?.email}</p>
-              </div>
             </div>
-            <div className="profile-stats-line">
+            <h2 className="pv3-passport-name">{form.fullName || user?.username}</h2>
+            <p className="pv3-passport-handle">@{user?.username}</p>
+            <p className="pv3-passport-email">{user?.email}</p>
+            <div className="pv3-passport-stats">
               {PROFILE_STATS.map((stat) => (
-                <span key={stat.label.en}>
-                  <em>{stat.label[prefs.language]}</em>
-                  <strong>{stat.value[prefs.language]}</strong>
-                </span>
+                <div key={stat.label.en}>
+                  <em>{stat.label[prefs.language] || stat.label.en}</em>
+                  <strong>{stat.value[prefs.language] || stat.value.en}</strong>
+                </div>
               ))}
             </div>
           </div>
 
-          <div className="profile-title-area">
-            <span>{t('account')}</span>
-            <h2>{t('profileTitle')}</h2>
-          </div>
-
-          <div className="profile-symbol-controls" aria-label={tr ? 'Görünüm kontrolleri' : 'Display controls'}>
-            <div className="profile-symbol-group">
-              <span>{t('language')}</span>
-              <div>
-                {[
-                  { value: 'en', label: 'EN', mark: 'A' },
-                  { value: 'tr', label: 'TR', mark: 'I' },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={prefs.language === item.value ? 'is-active' : ''}
-                    onClick={() => savePrefs({ ...prefs, language: item.value })}
-                    aria-pressed={prefs.language === item.value}
-                  >
-                    <strong>{item.mark}</strong>
-                    <em>{item.label}</em>
-                  </button>
-                ))}
+          {/* Right: header + fields + actions */}
+          <div className="pv3-hero-body">
+            <div className="pv3-hero-top">
+              <div className="pv3-hero-copy">
+                <span className="pv3-eyebrow">{t('account')}</span>
+                <h1 className="pv3-hero-title">{t('profileTitle')}</h1>
+                <p className="pv3-hero-desc">
+                  {tr
+                    ? 'Hesap ayarlarını, görünümü ve öneri tercihlerini tek bir düzenli akışta yönet.'
+                    : 'Manage your account details, appearance, and recommendation preferences in one clean space.'}
+                </p>
               </div>
-            </div>
-            <div className="profile-symbol-group">
-              <span>{t('theme')}</span>
-              <div>
-                {[
-                  { value: 'light', label: t('light'), mark: 'sun' },
-                  { value: 'dark', label: t('dark'), mark: 'moon' },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={prefs.appearance === item.value ? 'is-active' : ''}
-                    onClick={() => savePrefs({ ...prefs, appearance: item.value })}
-                    aria-pressed={prefs.appearance === item.value}
-                  >
-                    <strong className={`profile-theme-mark ${item.value}`} />
-                    <em>{item.label}</em>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="profile-edit-stream">
-          <div className="profile-line-fields">
-            <label>
-              <span>{t('fullName')}</span>
-              <input
-                value={form.fullName}
-                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                className="input"
-                placeholder={t('fullName')}
-              />
-            </label>
-            <label>
-              <span>{t('username')}</span>
-              <input
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="input"
-                placeholder="moodlover"
-              />
-            </label>
-            <label>
-              <span>{t('email')}</span>
-              <input value={user?.email || ''} disabled className="input cursor-not-allowed opacity-60" />
-            </label>
-          </div>
-
-          <div className="profile-avatar-lab">
-            <div className="profile-avatar-preview">
-              <UserAvatar
-                value={form.avatar}
-                name={user?.username || initials}
-                className="profile-avatar-large"
-                onError={() => setAvatarError(true)}
-              />
-              <div>
-                <span>{tr ? 'Avatar lab' : 'Avatar lab'}</span>
-                <h3>{tr ? 'Sana benzesin.' : 'Make it feel like you.'}</h3>
+              <div className="pv3-hero-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowPwChange((v) => !v)}
+                  className="profile-text-button"
+                >
+                  {showPwChange ? t('cancelPassword') : t('changePassword')}
+                </button>
+                <button type="submit" disabled={savingProfile} className="btn-primary pv3-save-btn">
+                  {savingProfile ? t('saving') : t('saveChanges')}
+                </button>
               </div>
             </div>
 
-            <div className="profile-upload-row">
-              <label className="profile-upload-drop">
+            <div className="pv3-fields">
+              <label className="pv3-field">
+                <span>{t('fullName')}</span>
+                <input
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  className="input"
+                  placeholder={t('fullName')}
+                />
+              </label>
+              <label className="pv3-field">
+                <span>{t('username')}</span>
+                <input
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  className="input"
+                  placeholder="moodlover"
+                />
+              </label>
+              <label className="pv3-field">
+                <span>{t('email')}</span>
+                <input value={user?.email || ''} disabled className="input cursor-not-allowed opacity-60" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SECONDARY GRID ── */}
+        <div className="pv3-grid">
+
+          {/* Language & Theme */}
+          <section className="profile-card pv3-section">
+            <div className="pv3-section-head">
+              <span className="pv3-eyebrow">{tr ? 'Görünüm' : 'Appearance'}</span>
+              <h3>{tr ? 'Language & Theme' : 'Language & Theme'}</h3>
+              <p>{tr ? 'Uygulamanın dilini ve genel görünümünü seç.' : 'Choose the app language and the overall look you want to browse in.'}</p>
+            </div>
+
+            <div className="pv3-appearance-groups">
+              <div className="pv3-appearance-group">
+                <span className="pv3-group-label">{t('language')}</span>
+                <div className="pv3-theme-btns">
+                  {[
+                    { value: 'en', label: 'EN', mark: 'A' },
+                    { value: 'tr', label: 'TR', mark: 'I' },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`pv3-theme-btn${prefs.language === item.value ? ' is-active' : ''}`}
+                      onClick={() => savePrefs({ ...prefs, language: item.value })}
+                      aria-pressed={prefs.language === item.value}
+                    >
+                      <strong className="pv3-lang-mark">{item.mark}</strong>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pv3-appearance-group">
+                <span className="pv3-group-label">{t('theme')}</span>
+                <div className="pv3-theme-btns">
+                  {[
+                    { value: 'light', label: t('light') },
+                    { value: 'dark', label: t('dark') },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`pv3-theme-btn${prefs.appearance === item.value ? ' is-active' : ''}`}
+                      onClick={() => savePrefs({ ...prefs, appearance: item.value })}
+                      aria-pressed={prefs.appearance === item.value}
+                    >
+                      <span className={`pv3-theme-dot pv3-theme-dot--${item.value}`} />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Avatar lab */}
+          <section className="profile-card pv3-section">
+            <div className="pv3-section-head">
+              <span className="pv3-eyebrow">{tr ? 'Avatar lab' : 'Avatar lab'}</span>
+              <h3>{tr ? 'Make it feel like you.' : 'Make it feel like you.'}</h3>
+              <p>{tr ? 'Hazır avatar seç ya da kendi fotoğrafını yükle.' : 'Pick a preset avatar or upload a photo for a more personal look.'}</p>
+            </div>
+            <div className="pv3-avatar-controls">
+              <label className="profile-upload-drop pv3-upload">
                 <input type="file" accept="image/*" onChange={handleAvatarUpload} />
                 <strong>{tr ? 'Foto yükle' : 'Upload photo'}</strong>
                 <span>{tr ? 'JPG, PNG, WEBP - 6MB altı' : 'JPG, PNG, WEBP under 6MB'}</span>
               </label>
+              <div className="profile-avatar-rail">
+                {AVATAR_PRESETS.map((preset) => {
+                  const value = `preset:${preset.id}`;
+                  const selected = form.avatar === value;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => { setAvatarError(false); setForm({ ...form, avatar: value }); }}
+                      className={`profile-avatar-option${selected ? ' is-selected' : ''}`}
+                      aria-label={tr ? `${preset.name} avatarını kullan` : `Use ${preset.name} avatar`}
+                    >
+                      <UserAvatar value={value} name={preset.name} className="h-full w-full" />
+                    </button>
+                  );
+                })}
+              </div>
+              {avatarError && (
+                <p className="profile-avatar-help is-error">
+                  {tr ? 'Bu görsel yüklenemedi. Başka bir fotoğraf dene.' : 'This image could not be loaded. Try another photo.'}
+                </p>
+              )}
             </div>
+          </section>
 
-            <div className="profile-avatar-rail">
-              {AVATAR_PRESETS.map((preset) => {
-                const value = `preset:${preset.id}`;
-                const selected = form.avatar === value;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => {
-                      setAvatarError(false);
-                      setForm({ ...form, avatar: value });
-                    }}
-                    className={`profile-avatar-option ${selected ? 'is-selected' : ''}`}
-                    aria-label={tr ? `${preset.name} avatarını kullan` : `Use ${preset.name} avatar`}
-                  >
-                    <UserAvatar value={value} name={preset.name} className="h-full w-full" />
-                  </button>
-                );
-              })}
+          {/* Recommendation preferences — full width */}
+          <section className="profile-card pv3-section pv3-rec-section">
+            <div className="pv3-section-head">
+              <span className="pv3-eyebrow">{tr ? 'Keşif konsolu' : 'Discovery console'}</span>
+              <h3>{t('recommendationPrefs')}</h3>
+              <p>{tr ? 'Önerilerde ne kadar geniş ya da seçici olmak istediğini ayarla.' : 'Control how broad or selective the recommendation feed should feel.'}</p>
             </div>
-
-            {avatarError && (
-              <p className="profile-avatar-help is-error">
-                {tr ? 'Bu görsel yüklenemedi. Başka bir fotoğraf dene.' : 'This image could not be loaded. Try another photo.'}
-              </p>
-            )}
-          </div>
-
-          <div className="profile-save-ribbon">
-            <button
-              type="button"
-              onClick={() => setShowPwChange((v) => !v)}
-              className="profile-text-button"
-            >
-              {showPwChange ? t('cancelPassword') : t('changePassword')}
-            </button>
-            <button type="submit" disabled={savingProfile} className="btn-primary">
-              {savingProfile ? t('saving') : t('saveChanges')}
-            </button>
-          </div>
-        </section>
+            <div className="pv3-pref-grid">
+              {REC_PREF_GROUPS.map((group) => (
+                <div key={group.id} className="pv3-pref-row">
+                  <span>{t(group.labelKey)}</span>
+                  <Toggle
+                    checked={getGroupChecked(group)}
+                    onChange={(val) => handleRecPrefGroupToggle(group, val)}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </form>
 
+      {/* ── PASSWORD CHANGE ── */}
       {showPwChange && (
-        <form onSubmit={handlePasswordChange} className="profile-password-ribbon">
-          <h4>{t('changePassword')}</h4>
-          <input
-            type="password"
-            placeholder={tr ? 'Mevcut şifre' : 'Current password'}
-            value={pwForm.current}
-            onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
-            className="input"
-          />
-          <input
-            type="password"
-            placeholder={tr ? 'Yeni şifre (en az 6 karakter)' : 'New password (min 6 characters)'}
-            value={pwForm.next}
-            onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
-            className="input"
-          />
-          <input
-            type="password"
-            placeholder={tr ? 'Yeni şifreyi onayla' : 'Confirm new password'}
-            value={pwForm.confirm}
-            onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-            className="input"
-          />
-          <button type="submit" className="btn-secondary">{t('saveChanges')}</button>
+        <form onSubmit={handlePasswordChange} className="profile-card pv3-section pv3-pw-card">
+          <div className="pv3-section-head">
+            <span className="pv3-eyebrow">{t('changePassword')}</span>
+            <h3>{tr ? 'Security' : 'Security'}</h3>
+            <p>{tr ? 'Şifreni güncellemek için alanları doldur.' : 'Fill in the fields below to update your password.'}</p>
+          </div>
+          <div className="pv3-pw-fields">
+            <input
+              type="password"
+              placeholder={tr ? 'Mevcut şifre' : 'Current password'}
+              value={pwForm.current}
+              onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+              className="input"
+            />
+            <input
+              type="password"
+              placeholder={tr ? 'Yeni şifre (en az 6 karakter)' : 'New password (min 6 characters)'}
+              value={pwForm.next}
+              onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+              className="input"
+            />
+            <input
+              type="password"
+              placeholder={tr ? 'Yeni şifreyi onayla' : 'Confirm new password'}
+              value={pwForm.confirm}
+              onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+              className="input"
+            />
+            <button type="submit" className="btn-primary">{t('saveChanges')}</button>
+          </div>
         </form>
       )}
-
-      <section className="profile-discovery-stream">
-        <div className="profile-discovery-head">
-          <span>{tr ? 'Keşif konsolu' : 'Discovery console'}</span>
-          <h2>{t('recommendationPrefs')}</h2>
-        </div>
-
-        <div className="profile-pref-lanes">
-          {REC_PREF_GROUPS.map((group, index) => (
-            <div key={group.id} className="profile-pref-lane" style={{ '--i': index }}>
-              <span>{t(group.labelKey)}</span>
-              <Toggle
-                checked={getGroupChecked(group)}
-                onChange={(val) => handleRecPrefGroupToggle(group, val)}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };

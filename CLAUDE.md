@@ -250,6 +250,67 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-06] Auth screens — "Luma" bare wordmark at 5.8rem, pill and icon removed
+
+- **mood-frontend/src/components/AuthExperience.jsx** — Replaced `auth-brand` pill Link (containing `auth-brand-mark` icon + text span) with a bare `<Link className="auth-brand-wordmark">Luma</Link>`.
+- **mood-frontend/src/index.css** — Replaced `.auth-brand span:last-child` with `.auth-brand-wordmark`: Space Grotesk, `5.8rem`, weight 820, `letter-spacing: -0.03em`, same `vibeTitleGradient` animation (cream→teal→pink).
+- **Build:** `vite build` → 112 modules, 282kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] Auth screens — "Luma" animated gradient + hero title smaller; navbar reverted
+
+- **mood-frontend/src/components/AuthExperience.jsx** — No JSX change needed; target was the CSS for the existing `auth-brand span:last-child` (the "Luma" text inside the pill).
+- **mood-frontend/src/index.css** — `.auth-brand span:last-child`: replaced `text-shadow` glow with the same `vibeTitleGradient` animation used by the Vibe page title (`#fff8ed → #91ffe8 → #ff7aa8`), `color: transparent`, `background-clip: text`, Space Grotesk font. `.auth-hero-title` (override block): reduced `font-size` from `clamp(2.7rem,6.4vw,5.8rem)` to `clamp(2.2rem,5vw,4.4rem)`.
+- **mood-frontend/src/components/Navbar.jsx** — Reverted: `nav-brand-mark` icon and plain "Luma" text restored to navbar; removed `nav-brand-luma` span.
+- **Build:** `vite build` → 112 modules, 282kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] Navbar — icon removed, "Luma" replaced with animated gradient wordmark
+
+- **mood-frontend/src/components/Navbar.jsx** — Removed `LogoMark` SVG component and its render. Removed unused `theme` destructure from `useMoodTheme()`. Replaced icon + plain text with `<span className="nav-brand-luma">Luma</span>`.
+- **mood-frontend/src/index.css** — Replaced `.nav-brand-mark` block with `.nav-brand-luma`: Space Grotesk display font, `clamp(1.55rem,2.2vw,2rem)`, weight 820, same `vibeTitleGradient` animation as the Vibe page title. Dark mode: cream → teal → pink gradient. Light mode override: purple → sky → pink gradient matching `.theme-light .vibe-zero-shell :where(.zero-title)`.
+- **Build:** `vite build` → 112 modules, 281kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] ProfilePage passport — light-mode warm palette
+
+- **mood-frontend/src/index.css** — Added `.theme-light .pv3-passport` override block: replaces the dark `linear-gradient(145deg, #080809 …)` with a warm cream `linear-gradient(145deg, #f0e8d8, #e8ddc8, #ede3cf)` and a softer mood-accent radial glow. Matching overrides for `.pv3-passport::after` (dark grid lines → light), `.pv3-passport-eyebrow/name/handle/email` (white tones → warm dark browns), `.pv3-passport-stats > div` (white/5% → white/45% with black border), `.pv3-passport-stats em/strong` (cream → warm dark ink). Dark mode passport is unchanged.
+- **Build:** `vite build` → 112 modules, 281kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] ProfilePage — Turkish restored + missing pv3 CSS classes added
+
+- **mood-frontend/src/pages/ProfilePage.jsx** — Turkish language support restored into the new `pv3-*` design: `const tr = prefs.language === 'tr'` reinstated, `PROFILE_STATS` converted back to `{ en, tr }` keyed objects, all `tr ? 'Turkish' : 'English'` toast/label ternaries restored, language switcher (EN/TR buttons) re-added inside Appearance section using `pv3-appearance-groups` layout.
+- **mood-frontend/src/index.css** — Added missing CSS for classes used in restored JSX: `.pv3-appearance-groups` (column layout container), `.pv3-appearance-group` (individual Language/Theme sub-section), `.pv3-group-label` (uppercase tracking label), `.pv3-lang-mark` (character badge inside language button), `.pv3-theme-btn.is-active .pv3-lang-mark` (active accent color).
+- **Build:** `vite build` → 112 modules, 280kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] ProfilePage full redesign — cleaner hero card, language toggle removed
+
+- **mood-frontend/src/pages/ProfilePage.jsx** — Complete rewrite with new `pv3-*` class vocabulary. Key changes: (1) removed all Turkish (`const tr`, all ternaries); (2) removed language switcher (EN/TR buttons) — only theme toggle remains; (3) hero card is now 2-col (dark passport left + account fields right in one card); (4) account fields inline in hero body (3-col grid: full name, username, email); (5) bottom `pv3-grid` (2-col): Theme card + Avatar lab; (6) recommendation prefs in full-width `pv3-rec-section` with `pv3-pref-grid` 3-col layout; (7) `PROFILE_STATS` simplified to direct strings (no language keys); (8) password card appears below as `pv3-pw-card`.
+- **mood-frontend/src/index.css** — Added ~280-line `pv3-*` CSS block: `.pv3-shell`, `.pv3-hero-card`, `.pv3-passport` (dark gradient with grid texture), `.pv3-hero-body`, `.pv3-fields`, `.pv3-grid`, `.pv3-section`, `.pv3-theme-btn`, `.pv3-pref-grid`, `.pv3-pref-row`, `.pv3-pw-*`, full dark-mode overrides, responsive breakpoints at 1100px / 860px.
+- **Build:** `vite build` → 112 modules, 277kB CSS, 351kB JS, 0 errors.
+
+### [2026-05-06] Mood card centered + books title gap equalized to music section
+
+- **mood-frontend/src/index.css** — Two fixes in the final override block: (1) `.zero-manifesto { padding-top: 0 }` — hero's own bottom padding (`clamp(1rem,2vw,1.5rem)`) now solely creates the gap above the card, matching the manifesto's bottom padding below it; previously double-stacking with manifesto-top created a 2× asymmetry. (2) `.library-stage { padding-top: 0 }` — removes the extra `3rem` top padding that was stacking on top of `.zero-chapter-head`'s `margin-bottom`, making the title-to-content gap in books match the music section.
+- **Build:** `vite build` → 112 modules, 272kB CSS, 353kB JS, 0 errors.
+
+### [2026-05-06] Section bottom gaps and moodboard teaser spacing equalized
+
+- **mood-frontend/src/index.css** — Added to final override block: `.zero-chapter { padding-bottom: clamp(1rem,2vw,1.5rem) }` (was `clamp(3.5rem,6vw,6rem)` creating ~96px gap before the teaser); `.vibe-moodboard-teaser { margin-top: clamp(1rem,2vw,1.5rem) }` (was `3rem`); `.vibe-zero-results { padding-bottom: clamp(1rem,2vw,1.5rem) }` (was `5rem` = 80px below the teaser). All three gaps now match the other equalized gaps on the page.
+- **Build:** `vite build` → 112 modules, 265kB CSS, 351kB JS, 0 errors.
+
+### [2026-05-06] Scene-switcher to title gap collapsed to match card/switcher gap
+
+- **mood-frontend/src/index.css** — Added to the final override block: `.scene-switcher { margin-bottom: 0 }` and `.scene-switcher + .zero-chapter { padding-top: clamp(1rem,2vw,1.5rem) }`. Previously the gap between scene-switcher and the section title was double-stacked: `margin-bottom: clamp(1.4rem,3vw,2.4rem)` + `.scene-switcher + .zero-chapter` `padding-top: clamp(1.6rem,4vw,3.25rem)` ≈ 90px total. Now collapsed to a single `clamp(1rem,2vw,1.5rem)` matching the card→switcher gap.
+- **Build:** `vite build` → 112 modules, 265kB CSS, 351kB JS, 0 errors.
+
+### [2026-05-06] mood-orbital-card spacing equalized — equal gap to live filter and scene-switcher
+
+- **mood-frontend/src/index.css** — Added final override block at end of cascade: (1) `:where(.vibe-zero-hero) { padding-bottom: clamp(1rem,2vw,1.5rem) }` — reduced hero bottom from `clamp(2.25rem,5vw,4.5rem)` which was the main contributor to the large gap above the card; (2) `.zero-manifesto { padding-top/bottom: clamp(1rem,2vw,1.5rem) }` — equalized both sides (was asymmetric: top `clamp(1.3rem,3vw,2rem)`, bottom `clamp(1rem,2.4vw,1.65rem)`); (3) `.mood-orbital-card { padding: clamp(0.75rem,1.6vw,1.15rem) }` — reduced internal card padding from `clamp(1rem,2.4vw,1.65rem)`.
+- **Build:** `vite build` → 112 modules, 264kB CSS, 351kB JS, 0 errors.
+
+### [2026-05-06] zero-title animated gradient extended to light mode
+
+- **mood-frontend/src/index.css** — Added `.theme-light .vibe-zero-shell :where(.zero-title)` override block after the existing dark-mode gradient rule. Light mode now uses the same `vibeTitleGradient` animation with a dark-toned palette (`#7c3aed → #0ea5e9 → #ec4899`) so the gradient is visible against the light background. Also added a matching `::after` underline rule with light-mode colors (`#ec4899 → #f59e0b → #0ea5e9`). Previously the `.theme-light .zero-title` color override was winning the cascade and killing the `color: transparent` required for gradient-clip-text.
+- **Build:** `vite build` → 112 modules, 264kB CSS, 351kB JS, 0 errors.
+
 ### [2026-05-06] Moodboard — regen button aligned to header row, canvas height reduced
 
 - **mood-frontend/src/pages/MoodboardPage.jsx** — Moved "Regenerate moodboard" button back into `mb-prompt-header` (right side, same row as "Moodboard for [prompt] [Edit mood]"). Removed regen button from top of `mb-panel`. Reduced `CH` (canvas internal height) from 840 → 700 to shorten the poster canvas and bring it closer to the panel height.

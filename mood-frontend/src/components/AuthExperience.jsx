@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { MOOD_HEX, NEUTRAL_THEME, VIBE_COLORS } from '../utils/constants';
 
 const contentFor = (tr) => [
   {
@@ -166,18 +167,28 @@ const AuthExperience = ({ mode }) => {
     <div
       className="auth-page"
       style={{
-        '--auth-accent': theme?.accent || '#d94f45',
-        '--auth-soft': theme?.soft || '#f5d7a1',
-        '--auth-ink': theme?.ink || '#193a35',
+        '--auth-accent': theme?.accent || NEUTRAL_THEME.accent,
+        '--auth-soft': theme?.soft || NEUTRAL_THEME.soft,
+        '--auth-ink': theme?.ink || NEUTRAL_THEME.ink,
+        '--auth-happy': MOOD_HEX.happy,
+        '--auth-sad': MOOD_HEX.sad,
+        '--auth-excited': MOOD_HEX.excited,
+        '--auth-calm': MOOD_HEX.calm,
+        '--auth-angry': MOOD_HEX.angry,
+        '--auth-romantic': MOOD_HEX.romantic,
+        '--auth-nostalgic': MOOD_HEX.nostalgic,
+        '--auth-tired': MOOD_HEX.tired,
+        '--auth-cinematic': VIBE_COLORS.cinematic.accent,
+        '--auth-fresh': VIBE_COLORS.fresh.accent,
+        '--auth-dreamy': VIBE_COLORS.dreamy.accent,
       }}
     >
       <AuthBackground tr={tr} />
 
       <section className="auth-stage">
         <div className="auth-story">
-          <Link to="/vibe" className="auth-brand auth-step" style={{ '--step': 0 }}>
-            <span className="auth-brand-mark">L</span>
-            <span>Luma</span>
+          <Link to="/vibe" className="auth-step" style={{ '--step': 0 }}>
+            <span className="auth-brand-wordmark">Luma</span>
           </Link>
           <h1 className="auth-hero-title auth-step" style={{ '--step': 1 }}>
             {copy.heroTitle}

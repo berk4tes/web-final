@@ -5,22 +5,16 @@ import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 
-const LogoMark = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z" />
-  </svg>
-);
-
 const NAV_ITEMS = [
   { to: '/vibe', key: 'navVibe' },
+  { to: '/moodboard', key: 'navMoodboard' },
   { to: '/dashboard', key: 'navDashboard' },
   { to: '/motivation', key: 'navMotivation' },
-  { to: '/moodboard', key: 'navMoodboard' },
 ];
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, resetVibe, vibeData } = useMoodTheme();
+  const { resetVibe } = useMoodTheme();
   const { prefs, t } = useUserPreferences();
   const tr = prefs.language === 'tr';
   const navigate = useNavigate();
@@ -39,22 +33,12 @@ const Navbar = () => {
 
         {/* Logo */}
         <Link to="/" className="flex shrink-0 items-center gap-2.5">
-          <span
-            className="nav-brand-mark shrink-0 text-white"
-            style={{
-              background: theme
-                ? `linear-gradient(145deg, ${theme.accent}, ${theme.ink})`
-                : 'linear-gradient(145deg, #7c5cff, #e87a4d)',
-            }}
-          >
-            <LogoMark />
+          <span className="nav-brand-mark shrink-0 text-white">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z" />
+            </svg>
           </span>
-          <span className="text-[1rem] font-semibold tracking-tight text-ink-700">Luma</span>
-          {vibeData?.mood?.title && (
-            <span className="hidden max-w-[15rem] truncate text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-ink-400 xl:block">
-              {vibeData.mood.title}
-            </span>
-          )}
+          <span className="text-[1.35rem] font-bold tracking-tight text-ink-700">Luma</span>
         </Link>
 
         {/* Desktop nav */}

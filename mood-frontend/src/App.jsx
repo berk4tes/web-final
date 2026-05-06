@@ -14,10 +14,12 @@ import NotFoundPage from './pages/NotFoundPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import VibePage from './pages/VibePage';
+import { NEUTRAL_THEME } from './utils/constants';
 
 // Applies a gentle mood-tinted background overlay that smoothly transitions on theme change.
 // background-color is CSS-transitionable so this gives a real crossfade effect.
 const MOOD_MOTION = {
+  neutral: { rhythm: '16s', fieldRhythm: '22s', drift: '18px', route: '540ms', ease: 'cubic-bezier(0.22, 1, 0.36, 1)', grain: 0.12 },
   calm: { rhythm: '14s', fieldRhythm: '19s', drift: '24px', route: '520ms', ease: 'cubic-bezier(0.22, 1, 0.36, 1)', grain: 0.18 },
   sad: { rhythm: '18s', fieldRhythm: '24s', drift: '16px', route: '620ms', ease: 'cubic-bezier(0.33, 1, 0.68, 1)', grain: 0.13 },
   nostalgic: { rhythm: '16s', fieldRhythm: '22s', drift: '20px', route: '560ms', ease: 'cubic-bezier(0.25, 1, 0.5, 1)', grain: 0.2 },
@@ -35,11 +37,12 @@ const ThemedWrapper = ({ children }) => {
   const { prefs } = useUserPreferences();
   const location = useLocation();
   const dark = prefs.appearance === 'dark';
-  const motion = MOOD_MOTION[colorKey] || MOOD_MOTION.happy;
+  const activeTheme = theme || NEUTRAL_THEME;
+  const motion = colorKey ? (MOOD_MOTION[colorKey] || MOOD_MOTION.neutral) : MOOD_MOTION.neutral;
   const themeVars = {
-    '--mood-accent': theme?.accent || '#e6b54a',
-    '--mood-soft': theme?.soft || '#faf0d4',
-    '--mood-ink': theme?.ink || '#7a5916',
+    '--mood-accent': activeTheme.accent,
+    '--mood-soft': activeTheme.soft,
+    '--mood-ink': activeTheme.ink,
     '--mood-rhythm': motion.rhythm,
     '--mood-field-rhythm': motion.fieldRhythm,
     '--mood-drift': motion.drift,
@@ -47,12 +50,8 @@ const ThemedWrapper = ({ children }) => {
     '--route-ease': motion.ease,
     '--mood-grain-opacity': motion.grain,
     '--page-bg': dark ? '#11100d' : '#f8f7f4',
-    '--surface': theme
-      ? `color-mix(in srgb, ${dark ? '#1f1d18' : '#ffffff'} ${dark ? '76%' : '66%'}, ${theme.soft})`
-      : (dark ? 'rgba(31, 29, 24, 0.92)' : 'rgba(255, 255, 255, 0.9)'),
-    '--surface-strong': theme
-      ? `color-mix(in srgb, ${dark ? '#1f1d18' : '#ffffff'} ${dark ? '86%' : '74%'}, ${theme.soft})`
-      : (dark ? '#1f1d18' : '#ffffff'),
+    '--surface': `color-mix(in srgb, ${dark ? '#1f1d18' : '#ffffff'} ${dark ? '78%' : '68%'}, ${activeTheme.soft})`,
+    '--surface-strong': `color-mix(in srgb, ${dark ? '#1f1d18' : '#ffffff'} ${dark ? '88%' : '76%'}, ${activeTheme.soft})`,
     '--ink-main': dark ? '#f8f7f4' : '#1f1d18',
     '--ink-soft': dark ? '#d9d2c3' : '#52503f',
     '--ink-muted': dark ? '#a8a190' : '#7a7565',
@@ -77,19 +76,15 @@ const ThemedWrapper = ({ children }) => {
       <div
         className="mood-atmosphere pointer-events-none fixed inset-0 z-0"
         style={{
-          background: theme
-            ? `radial-gradient(circle at 16% 14%, color-mix(in srgb, ${theme.accent} 42%, transparent), transparent 30%),
-               radial-gradient(circle at 86% 26%, color-mix(in srgb, ${theme.soft} ${dark ? '34%' : '78%'}, transparent), transparent 36%),
-               radial-gradient(circle at 22% 78%, color-mix(in srgb, ${theme.accent} ${dark ? '20%' : '24%'}, transparent), transparent 38%),
-               radial-gradient(circle at 82% 88%, color-mix(in srgb, ${theme.accent} ${dark ? '18%' : '18%'}, transparent), transparent 42%),
+          background: `radial-gradient(circle at 16% 14%, color-mix(in srgb, ${activeTheme.accent} ${theme ? '42%' : '18%'}, transparent), transparent 30%),
+               radial-gradient(circle at 86% 26%, color-mix(in srgb, ${activeTheme.soft} ${dark ? (theme ? '34%' : '16%') : (theme ? '78%' : '42%')}, transparent), transparent 36%),
+               radial-gradient(circle at 22% 78%, color-mix(in srgb, ${activeTheme.accent} ${dark ? (theme ? '20%' : '12%') : (theme ? '24%' : '14%')}, transparent), transparent 38%),
+               radial-gradient(circle at 82% 88%, color-mix(in srgb, ${activeTheme.accent} ${dark ? (theme ? '18%' : '10%') : (theme ? '18%' : '10%')}, transparent), transparent 42%),
                linear-gradient(180deg,
-                 color-mix(in srgb, ${theme.soft} ${dark ? '22%' : '72%'}, ${dark ? '#14110f' : '#fbf8f0'}) 0%,
-                 color-mix(in srgb, ${theme.accent} ${dark ? '18%' : '16%'}, ${dark ? '#11100d' : '#f8f1e7'}) 46%,
-                 color-mix(in srgb, ${theme.soft} ${dark ? '18%' : '62%'}, ${dark ? '#0f0d0b' : '#fbf4ea'}) 100%)`
-            : dark
-              ? 'linear-gradient(145deg, #17150f 0%, #11100d 100%)'
-              : 'transparent',
-          opacity: theme ? (dark ? 0.72 : 1) : dark ? 1 : 0,
+                 color-mix(in srgb, ${activeTheme.soft} ${dark ? (theme ? '22%' : '10%') : (theme ? '72%' : '48%')}, ${dark ? '#14110f' : '#fbf8f0'}) 0%,
+                 color-mix(in srgb, ${activeTheme.accent} ${dark ? (theme ? '18%' : '8%') : (theme ? '16%' : '10%')}, ${dark ? '#11100d' : '#f8f1e7'}) 46%,
+                 color-mix(in srgb, ${activeTheme.soft} ${dark ? (theme ? '18%' : '12%') : (theme ? '62%' : '44%')}, ${dark ? '#0f0d0b' : '#fbf4ea'}) 100%)`,
+          opacity: dark ? (theme ? 0.72 : 0.92) : theme ? 1 : 0.82,
           transition: 'opacity 0.8s ease, background 0.8s ease',
           mixBlendMode: 'normal',
         }}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import BookDetailModal from '../components/BookDetailModal';
 import LoadingVibeState from '../components/LoadingVibeState';
 import { useAuth } from '../context/AuthContext';
 import { useMoodTheme } from '../context/MoodThemeContext';
@@ -122,7 +121,6 @@ const VibePage = () => {
 
   // UI state
   const [movieDetail, setMovieDetail] = useState(null);
-  const [bookDetail, setBookDetail] = useState(null);
   const [savedVibes, setSavedVibes] = useState([]);
   const [activeMovieId, setActiveMovieId] = useState(null);
   const [activeMusicId, setActiveMusicId] = useState(null);
@@ -625,7 +623,7 @@ const VibePage = () => {
                 value={prompt}
                 onChange={(e) => handlePromptChange(e.target.value)}
                 name="prompt"
-                placeholder={prefs.language === 'tr' ? 'Neon yağmur, kampüs crush, gece kahvesi...' : 'Neon rain, campus crush, late coffee...'}
+                placeholder={prefs.language === 'tr' ? 'Enerji dolu, huzurlu bir sakinlik, gece geç saat düşünceleri…' : 'Full of energy, a quiet kind of peace, late night thoughts…'}
                 maxLength={500}
                 className="zero-command-input"
                 autoFocus
@@ -1082,11 +1080,11 @@ const VibePage = () => {
                       </div>
                       <div className="storybook-page storybook-page-cover">
                         <span>{prefs.language === 'tr' ? 'kapak sayfası' : 'cover page'}</span>
-                        <button type="button" className="storybook-cover-button" onClick={() => activeBook && setBookDetail(activeBook)}>
+                        <div className="storybook-cover-button">
                           {activeBookCover
                             ? <img src={activeBookCover} alt={activeBook?.title || ''} />
                             : <div className="library-cover-empty" />}
-                        </button>
+                        </div>
                         <em>{activeBook?.overview || activeBook?.author || moodTitle}</em>
                       </div>
                     </div>
@@ -1116,12 +1114,6 @@ const VibePage = () => {
                           </button>
                         );
                       })}
-                    </div>
-                    <div className="library-info-actions">
-                      <button type="button" className="action-read" onClick={() => activeBook && dismissBook(activeBook)}>
-                        <GlassesIcon />
-                        {prefs.language === 'tr' ? 'Okudum' : 'Read'}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -1181,13 +1173,6 @@ const VibePage = () => {
           </>
         )}
       </div>
-
-      <BookDetailModal
-        item={bookDetail}
-        onClose={() => setBookDetail(null)}
-        isFavorite={isFavorite}
-        onToggleFavorite={toggle}
-      />
     </div>
   );
 };

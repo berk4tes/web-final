@@ -29,6 +29,15 @@ export const MOOD_HEX = {
   tired: '#9ca3af',
 };
 
+export const NEUTRAL_THEME = {
+  label: 'Neutral',
+  accent: '#b9ab98',
+  soft: '#f6f1e9',
+  ink: '#312821',
+  gradient: 'from-stone-200 via-zinc-100 to-amber-50',
+  ring: 'ring-stone-200',
+};
+
 // Vibe color palette — used by the prompt-based vibe interpretation flow.
 // Each entry maps to a colorKey returned by the backend mood interpretation.
 export const VIBE_COLORS = {
@@ -162,9 +171,7 @@ export const MOOD_PROMPT_SUGGESTIONS = {
     'Running until the frustration fades',
   ],
   romantic: [
-    'Aşkın kırmızı ışıkları ve gece yürüyüşü',
     'A velvet love letter after midnight',
-    'Kırmızı güller, kalp çarpıntısı, sinema ışığı',
     'A romantic rooftop with neon in the rain',
   ],
   cinematic: [
