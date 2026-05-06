@@ -695,6 +695,20 @@ const MotivationPage = () => {
     });
   };
 
+  const saveCollectionToDatabase = (type, entry) => {
+    api.post('/collections', {
+      type,
+      contentType: entry.contentType,
+      externalId: entry.externalId,
+      title: entry.title,
+      thumbnail: entry.thumbnail,
+    }).catch((err) => {
+      if (err?.response?.status !== 409) {
+        toast.error(tr ? 'Koleksiyon database’e yazılamadı' : 'Could not save to database');
+      }
+    });
+  };
+
   const awardTask = async (task) => {
     if (!task) return false;
     if (awardedTaskIds.has(task.id)) return false;
@@ -797,6 +811,7 @@ const MotivationPage = () => {
       if (!existing.some((item) => (item.externalId || item.title) === entry.externalId)) {
         writeUserScopedJson(WATCHED_KEY, userId, [entry, ...existing].slice(0, 100));
       }
+      saveCollectionToDatabase('watched', entry);
       await awardTask(DAILY_TASKS.find((task) => task.id === 'seasonalWatch'));
     }
 
@@ -816,6 +831,7 @@ const MotivationPage = () => {
       if (!existing.some((item) => (item.externalId || item.title) === entry.externalId)) {
         writeUserScopedJson(READ_KEY, userId, [entry, ...existing].slice(0, 100));
       }
+      saveCollectionToDatabase('read', entry);
       await awardTask(DAILY_TASKS.find((task) => task.id === 'seasonalRead'));
     }
 

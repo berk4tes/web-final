@@ -323,18 +323,23 @@ const COLOR_TO_MOOD_LABEL = {
   sad: 'sad',
   nostalgic: 'nostalgic',
   angry: 'angry',
+  romantic: 'excited',
   dreamy: 'calm',
   happy: 'happy',
   excited: 'excited',
+  cinematic: 'excited',
+  fresh: 'calm',
 };
 
 const PROMPT_MOOD_KEYWORDS = [
   { mood: 'nostalgic', words: ['autumn', 'fall', 'vintage', 'memory', 'old', 'sonbahar', 'nostalji'] },
   { mood: 'happy', words: ['paris', 'parisian', 'cafe', 'sun', 'sunny', 'golden', 'laugh', 'mutlu', 'gunes'] },
+  { mood: 'excited', words: ['love', 'romance', 'crush', 'passion', 'heart', 'rose', 'ask', 'aşk', 'sevgi', 'sevgili', 'tutku', 'kalp', 'kirmizi gul', 'kırmızı gül'] },
   { mood: 'sad', words: ['sad', 'rain', 'lonely', 'heartbreak', 'empty', 'uzgun', 'yalniz', 'huzun'] },
   { mood: 'calm', words: ['calm', 'quiet', 'peace', 'soft', 'garden', 'sakin', 'huzur'] },
   { mood: 'excited', words: ['electric', 'party', 'gym', 'adrenaline', 'energetic', 'enerjik', 'heyecan'] },
   { mood: 'angry', words: ['angry', 'storm', 'chaos', 'rage', 'dark', 'ofke', 'kizgin'] },
+  { mood: 'calm', words: ['fresh', 'clean', 'ocean', 'spring rain', 'ferah', 'temiz', 'deniz'] },
   { mood: 'calm', words: ['dream', 'dreamy', 'fog', 'moon', 'romantic', 'ruya', 'romantik'] },
 ];
 

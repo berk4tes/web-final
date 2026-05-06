@@ -41,7 +41,7 @@ Return ONLY a JSON object with this EXACT shape:
     "summary": "one short sentence (max 18 words) describing the emotional atmosphere",
     "tags": ["tag1", "tag2", "tag3", "tag4"],
     "intensity": 0.65,
-    "colorKey": "calm | sad | nostalgic | angry | dreamy | happy | excited"
+    "colorKey": "calm | sad | nostalgic | angry | romantic | dreamy | happy | excited | cinematic | fresh"
   },
   "music": [
     { "title": "exact song title", "artist": "primary artist", "reason": "why it fits", "genre": "primary genre" }
@@ -56,7 +56,10 @@ Return ONLY a JSON object with this EXACT shape:
 
 Rules:
 - "intensity" is a number between 0 and 1 representing emotional strength
-- "colorKey" must be one of: calm, sad, nostalgic, angry, dreamy, happy, excited
+- "colorKey" must be one of: calm, sad, nostalgic, angry, romantic, dreamy, happy, excited, cinematic, fresh
+- Use "romantic" for love, aşk, crush, passion, red roses, date-night, heart-forward prompts instead of "happy"
+- Use "cinematic" for movie-like, dramatic, noir, neon, film-grain prompts when no stronger emotion dominates
+- Use "fresh" for clean, new-start, airy, ocean, spring-rain prompts
 - "tags" must be 3-5 short words/phrases describing the vibe
 - "music" must contain EXACTLY 12 items so the interface can keep 10 visible after saves
 - "movies" must contain EXACTLY 12 items: the first 10 visible picks must be exactly 5 movies and 5 series, followed by 2 backup picks
@@ -140,7 +143,35 @@ const generateRecommendations = async (moodLabel, moodText, intensity, contentTy
   }
 };
 
-const VALID_COLOR_KEYS = ['calm', 'sad', 'nostalgic', 'angry', 'dreamy', 'happy', 'excited'];
+const VALID_COLOR_KEYS = ['calm', 'sad', 'nostalgic', 'angry', 'romantic', 'dreamy', 'happy', 'excited', 'cinematic', 'fresh'];
+
+const normalizePrompt = (value = '') =>
+  value
+    .toLocaleLowerCase('en-US')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const PROMPT_COLOR_RULES = [
+  { colorKey: 'romantic', words: ['love', 'romance', 'crush', 'passion', 'valentine', 'heart', 'rose', 'red roses', 'ask', 'aşk', 'sevgi', 'sevgili', 'tutku', 'kalp', 'kirmizi gul', 'kırmızı gül'] },
+  { colorKey: 'cinematic', words: ['cinematic', 'movie', 'film grain', 'noir', 'neon', 'widescreen', 'dramatic', 'sinema', 'film gibi'] },
+  { colorKey: 'fresh', words: ['fresh', 'clean', 'new start', 'ocean', 'spring rain', 'air', 'deniz', 'ferah', 'temiz', 'yeni baslangic', 'yeni başlangıç'] },
+];
+
+const inferColorKeyFromPrompt = (prompt = '') => {
+  const normalized = normalizePrompt(prompt);
+  let best = null;
+  let bestScore = 0;
+  for (const rule of PROMPT_COLOR_RULES) {
+    const score = rule.words.reduce((total, word) => (
+      normalized.includes(normalizePrompt(word)) ? total + normalizePrompt(word).length : total
+    ), 0);
+    if (score > bestScore) {
+      best = rule.colorKey;
+      bestScore = score;
+    }
+  }
+  return best;
+};
 
 const orderMoviePicks = (items = []) => {
   const normalized = items.map((item) => ({
@@ -159,10 +190,11 @@ const orderMoviePicks = (items = []) => {
   ].slice(0, 12);
 };
 
-const sanitizeVibe = (raw) => {
+const sanitizeVibe = (raw, prompt = '') => {
   const mood = raw.mood || {};
   const intensity = Number(mood.intensity);
-  const colorKey = VALID_COLOR_KEYS.includes(mood.colorKey) ? mood.colorKey : 'calm';
+  const promptColorKey = inferColorKeyFromPrompt(prompt);
+  const colorKey = promptColorKey || (VALID_COLOR_KEYS.includes(mood.colorKey) ? mood.colorKey : 'calm');
   return {
     mood: {
       title: String(mood.title || 'A Quiet Vibe').trim(),
@@ -189,11 +221,11 @@ const interpretVibe = async (prompt) => {
 
   try {
     const raw = await callAIRaw(builtPrompt, { maxTokens: 5500 });
-    return sanitizeVibe(raw);
+    return sanitizeVibe(raw, prompt);
   } catch (firstError) {
     console.warn('Vibe interpretation failed, retrying:', firstError.message);
     const raw = await callAIRaw(builtPrompt, { maxTokens: 5500 });
-    return sanitizeVibe(raw);
+    return sanitizeVibe(raw, prompt);
   }
 };
 

@@ -22,9 +22,12 @@ const MOOD_MOTION = {
   sad: { rhythm: '18s', fieldRhythm: '24s', drift: '16px', route: '620ms', ease: 'cubic-bezier(0.33, 1, 0.68, 1)', grain: 0.13 },
   nostalgic: { rhythm: '16s', fieldRhythm: '22s', drift: '20px', route: '560ms', ease: 'cubic-bezier(0.25, 1, 0.5, 1)', grain: 0.2 },
   angry: { rhythm: '7s', fieldRhythm: '10s', drift: '34px', route: '280ms', ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)', grain: 0.26 },
+  romantic: { rhythm: '12s', fieldRhythm: '17s', drift: '30px', route: '460ms', ease: 'cubic-bezier(0.22, 1, 0.36, 1)', grain: 0.22 },
   dreamy: { rhythm: '20s', fieldRhythm: '28s', drift: '28px', route: '700ms', ease: 'cubic-bezier(0.16, 1, 0.3, 1)', grain: 0.16 },
   happy: { rhythm: '10s', fieldRhythm: '14s', drift: '32px', route: '420ms', ease: 'cubic-bezier(0.22, 1, 0.36, 1)', grain: 0.22 },
   excited: { rhythm: '8s', fieldRhythm: '11s', drift: '42px', route: '320ms', ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)', grain: 0.24 },
+  cinematic: { rhythm: '13s', fieldRhythm: '18s', drift: '36px', route: '440ms', ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)', grain: 0.24 },
+  fresh: { rhythm: '11s', fieldRhythm: '15s', drift: '26px', route: '420ms', ease: 'cubic-bezier(0.22, 1, 0.36, 1)', grain: 0.18 },
 };
 
 const ThemedWrapper = ({ children }) => {
@@ -75,16 +78,20 @@ const ThemedWrapper = ({ children }) => {
         className="mood-atmosphere pointer-events-none fixed inset-0 z-0"
         style={{
           background: theme
-            ? `radial-gradient(circle at 18% 18%, color-mix(in srgb, ${theme.accent} 46%, transparent), transparent 32%),
-               radial-gradient(circle at 82% 24%, color-mix(in srgb, ${theme.soft} 88%, transparent), transparent 34%),
-               radial-gradient(circle at 50% 76%, color-mix(in srgb, ${theme.accent} 26%, transparent), transparent 40%),
-               linear-gradient(145deg, color-mix(in srgb, ${theme.soft} 82%, white) 0%, ${dark ? '#110f14' : '#f8f7f4'} 42%, color-mix(in srgb, ${theme.accent} 28%, ${theme.soft}) 100%)`
+            ? `radial-gradient(circle at 16% 14%, color-mix(in srgb, ${theme.accent} 42%, transparent), transparent 30%),
+               radial-gradient(circle at 86% 26%, color-mix(in srgb, ${theme.soft} ${dark ? '34%' : '78%'}, transparent), transparent 36%),
+               radial-gradient(circle at 22% 78%, color-mix(in srgb, ${theme.accent} ${dark ? '20%' : '24%'}, transparent), transparent 38%),
+               radial-gradient(circle at 82% 88%, color-mix(in srgb, ${theme.accent} ${dark ? '18%' : '18%'}, transparent), transparent 42%),
+               linear-gradient(180deg,
+                 color-mix(in srgb, ${theme.soft} ${dark ? '22%' : '72%'}, ${dark ? '#14110f' : '#fbf8f0'}) 0%,
+                 color-mix(in srgb, ${theme.accent} ${dark ? '18%' : '16%'}, ${dark ? '#11100d' : '#f8f1e7'}) 46%,
+                 color-mix(in srgb, ${theme.soft} ${dark ? '18%' : '62%'}, ${dark ? '#0f0d0b' : '#fbf4ea'}) 100%)`
             : dark
               ? 'linear-gradient(145deg, #17150f 0%, #11100d 100%)'
               : 'transparent',
-          opacity: theme ? (dark ? 0.46 : 1) : dark ? 1 : 0,
+          opacity: theme ? (dark ? 0.72 : 1) : dark ? 1 : 0,
           transition: 'opacity 0.8s ease, background 0.8s ease',
-          mixBlendMode: dark ? 'normal' : 'multiply',
+          mixBlendMode: 'normal',
         }}
       />
       <div className="mood-energy-grid pointer-events-none fixed inset-0 z-0" />

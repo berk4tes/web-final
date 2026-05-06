@@ -24,6 +24,7 @@ export const MOOD_HEX = {
   excited: '#e87a4d',
   calm: '#6dbb8a',
   angry: '#d96762',
+  romantic: '#e8486f',
   nostalgic: '#c89868',
   tired: '#9ca3af',
 };
@@ -62,6 +63,30 @@ export const VIBE_COLORS = {
     ink: '#7a2d2a',
     gradient: 'from-rose-200 via-red-200 to-orange-200',
     ring: 'ring-rose-300',
+  },
+  romantic: {
+    label: 'Romantic',
+    accent: '#e8486f',
+    soft: '#fde1ea',
+    ink: '#8f1f45',
+    gradient: 'from-rose-300 via-pink-200 to-red-200',
+    ring: 'ring-rose-300',
+  },
+  cinematic: {
+    label: 'Cinematic',
+    accent: '#9a6cff',
+    soft: '#ece4ff',
+    ink: '#3d247d',
+    gradient: 'from-violet-300 via-indigo-200 to-sky-200',
+    ring: 'ring-violet-300',
+  },
+  fresh: {
+    label: 'Fresh',
+    accent: '#38bdf8',
+    soft: '#def5ff',
+    ink: '#0f5f7d',
+    gradient: 'from-cyan-200 via-sky-200 to-teal-100',
+    ring: 'ring-cyan-300',
   },
   dreamy: {
     label: 'Dreamy',
@@ -135,6 +160,24 @@ export const MOOD_PROMPT_SUGGESTIONS = {
     'A storm that finally breaks open',
     'Fierce, unapologetic, and loud',
     'Running until the frustration fades',
+  ],
+  romantic: [
+    'Aşkın kırmızı ışıkları ve gece yürüyüşü',
+    'A velvet love letter after midnight',
+    'Kırmızı güller, kalp çarpıntısı, sinema ışığı',
+    'A romantic rooftop with neon in the rain',
+  ],
+  cinematic: [
+    'A widescreen city night with dramatic music',
+    'Film grain, neon streets, and a slow reveal',
+    'A director’s cut of your current mood',
+    'A glossy scene before something changes',
+  ],
+  fresh: [
+    'Windows open after spring rain',
+    'A clean morning with blue glass light',
+    'Starting over with sea air',
+    'Fresh sheets and a new playlist',
   ],
   dreamy: [
     'Heartbreak sleeping under string lights',

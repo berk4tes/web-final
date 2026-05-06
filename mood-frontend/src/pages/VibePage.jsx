@@ -472,6 +472,20 @@ const VibePage = () => {
     api.post('/motivation/award', { taskId: 'save' }).catch(() => {});
   };
 
+  const saveCollectionToDatabase = (type, entry) => {
+    api.post('/collections', {
+      type,
+      contentType: entry.contentType,
+      externalId: entry.externalId,
+      title: entry.title,
+      thumbnail: entry.thumbnail,
+    }).catch((err) => {
+      if (err?.response?.status !== 409) {
+        toast.error(prefs.language === 'tr' ? 'Koleksiyon database’e yazılamadı' : 'Could not save to database');
+      }
+    });
+  };
+
   const dismissMovie = (item) => {
     const id = getItemId(item);
     setMovieList((prev) => prev.filter((m) => getItemId(m) !== id));
@@ -487,6 +501,7 @@ const VibePage = () => {
     if (!existing.some((w) => (w.externalId || w.title) === (entry.externalId || entry.title))) {
       writeUserScopedJson(WATCHED_KEY, userId, [entry, ...existing].slice(0, 100));
     }
+    saveCollectionToDatabase('watched', entry);
   };
 
   const dismissBook = (item) => {
@@ -503,6 +518,7 @@ const VibePage = () => {
     if (!existing.some((b) => (b.externalId || b.title) === (entry.externalId || entry.title))) {
       writeUserScopedJson(READ_KEY, userId, [entry, ...existing].slice(0, 100));
     }
+    saveCollectionToDatabase('read', entry);
   };
 
   const handlePromptChange = (value) => {

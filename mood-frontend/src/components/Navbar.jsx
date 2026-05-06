@@ -59,7 +59,7 @@ const Navbar = () => {
 
         {/* Desktop nav */}
         {isAuthenticated && (
-          <nav className="nav-pill-shell hidden flex-1 items-center justify-center gap-1.5 md:flex">
+          <nav className="nav-pill-shell hidden flex-1 items-center justify-center gap-1.5 lg:flex">
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
@@ -77,7 +77,7 @@ const Navbar = () => {
         )}
 
         {/* Right side */}
-        <div className="nav-actions-shell hidden shrink-0 items-center gap-3 md:flex">
+        <div className="nav-actions-shell hidden shrink-0 items-center gap-3 lg:flex">
           {isAuthenticated ? (
             <>
               <Link
@@ -103,7 +103,7 @@ const Navbar = () => {
         {/* Mobile hamburger */}
         <button
           aria-label={tr ? 'Menüyü aç/kapat' : 'Toggle menu'}
-          className="nav-hamburger md:hidden"
+          className="nav-hamburger lg:hidden"
           onClick={() => setOpen((v) => !v)}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -116,7 +116,7 @@ const Navbar = () => {
 
       {/* Mobile menu */}
       {open && (
-        <div className="nav-mobile-drawer md:hidden">
+        <div className="nav-mobile-drawer lg:hidden">
           <div className="mx-auto max-w-[92rem] space-y-1 px-4 py-3">
             {isAuthenticated ? (
               <>
@@ -132,6 +132,15 @@ const Navbar = () => {
                     {item.label || t(item.key)}
                   </NavLink>
                 ))}
+                <NavLink
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    isActive ? 'nav-mobile-item-active' : 'nav-mobile-item'
+                  }
+                >
+                  {t('navProfile')}
+                </NavLink>
                 <button onClick={handleLogout} className="nav-mobile-item w-full text-left">
                   {t('signOut')}
                 </button>

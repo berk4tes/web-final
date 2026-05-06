@@ -46,6 +46,9 @@ const moodLabel = (mood, language = 'en') => {
     excited: { en: 'Electric', tr: 'Elektrik' },
     calm: { en: 'Calm', tr: 'Sakin' },
     angry: { en: 'Intense', tr: 'Yoğun' },
+    romantic: { en: 'Romantic', tr: 'Romantik' },
+    cinematic: { en: 'Cinematic', tr: 'Sinematik' },
+    fresh: { en: 'Fresh', tr: 'Ferah' },
     nostalgic: { en: 'Nostalgic', tr: 'Nostaljik' },
     tired: { en: 'Tired', tr: 'Yorgun' },
     dreamy: { en: 'Dreamy', tr: 'Dalgın' },
@@ -59,6 +62,9 @@ const moodFromColorKey = (colorKey) => ({
   sad: 'sad',
   excited: 'excited',
   angry: 'angry',
+  romantic: 'romantic',
+  cinematic: 'cinematic',
+  fresh: 'fresh',
   nostalgic: 'nostalgic',
   calm: 'calm',
 }[colorKey] || 'calm');
@@ -83,6 +89,35 @@ const parseMoodHistory = (items = []) =>
   }));
 
 const getItemKey = (item) => item?._id || item?.externalId || item?.title;
+const getCollectionIdentity = (item) => String(item?.externalId || item?.title || item?._id || '').toLowerCase();
+
+const normalizeCollectionItem = (item, type) => {
+  const normalized = {
+    ...item,
+    thumbnail: item?.thumbnail || item?.poster || '',
+  };
+  if (type === 'watched') {
+    normalized.contentType = item?.contentType === 'series' ? 'series' : 'movie';
+    normalized.watchedAt = item?.watchedAt || item?.recordedAt || item?.savedAt || item?.createdAt;
+  }
+  if (type === 'read') {
+    normalized.contentType = 'book';
+    normalized.readAt = item?.readAt || item?.recordedAt || item?.savedAt || item?.createdAt;
+  }
+  return normalized;
+};
+
+const mergeCollectionItems = (remoteItems, localItems, type) => {
+  const seen = new Set();
+  return [...remoteItems, ...localItems]
+    .map((item) => normalizeCollectionItem(item, type))
+    .filter((item) => {
+      const key = getCollectionIdentity(item);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
 
 const getCollectionThumbnail = async (item, type) => {
   if (item?.thumbnail) return item.thumbnail;
@@ -412,7 +447,7 @@ const CollectionTile = ({ item, type, onRemove, language }) => {
         <p>{formatDate(date, language) || (tr ? 'koleksiyonda' : 'in collection')}</p>
       </div>
       {onRemove && (
-        <button type="button" onClick={() => onRemove(getItemKey(item))}>
+        <button type="button" onClick={() => onRemove(item)}>
           {tr ? 'Sil' : 'Remove'}
         </button>
       )}
@@ -501,6 +536,7 @@ const DashboardPage = () => {
   const [savedVibes, setSavedVibes] = useState([]);
   const [recentMoods, setRecentMoods] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [collectionItems, setCollectionItems] = useState([]);
   const [watched, setWatched] = useState([]);
   const [readBooks, setReadBooks] = useState([]);
   const [moodHistory, setMoodHistory] = useState([]);
@@ -529,7 +565,7 @@ const DashboardPage = () => {
     };
     loadHistory();
     return () => { active = false; };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     let active = true;
@@ -557,27 +593,58 @@ const DashboardPage = () => {
     };
     loadFavorites();
     return () => { active = false; };
-  }, []);
+  }, [userId]);
+
+  useEffect(() => {
+    let active = true;
+    const loadCollections = async () => {
+      try {
+        const { data } = await api.get('/collections', { params: { limit: 100 } });
+        if (active) setCollectionItems(Array.isArray(data.data.items) ? data.data.items : []);
+      } catch {
+        if (active) setCollectionItems([]);
+      }
+    };
+    loadCollections();
+    return () => { active = false; };
+  }, [userId]);
 
   const favoriteMusic = useMemo(
     () => favorites.filter((item) => item.contentType === 'music'),
     [favorites]
   );
+  const remoteWatched = useMemo(
+    () => collectionItems.filter((item) => item.type === 'watched'),
+    [collectionItems]
+  );
+  const remoteReads = useMemo(
+    () => collectionItems.filter((item) => item.type === 'read'),
+    [collectionItems]
+  );
   const watchedMedia = useMemo(
-    () => watched.filter((item) => item.contentType === 'movie' || item.contentType === 'series' || !item.contentType),
-    [watched]
+    () => mergeCollectionItems(
+      remoteWatched,
+      watched.filter((item) => item.contentType === 'movie' || item.contentType === 'series' || !item.contentType),
+      'watched'
+    ),
+    [remoteWatched, watched]
+  );
+  const readCollection = useMemo(
+    () => mergeCollectionItems(remoteReads, readBooks, 'read'),
+    [remoteReads, readBooks]
   );
   const moodCounts = useMemo(() => getMoodCounts(savedVibes, moodHistory), [savedVibes, moodHistory]);
   const streak = useMemo(() => Math.max(getStreak(savedVibes, moodHistory), remoteStreak), [savedVibes, moodHistory, remoteStreak]);
   const topMood = moodCounts[0]?.[0] || savedVibes[0]?.mood?.colorKey || 'dreamy';
   const topColor = getVibeColor(topMood);
-  const totalSignals = savedVibes.length + moodHistory.length + favoriteMusic.length + watchedMedia.length + readBooks.length;
+  const totalSignals = savedVibes.length + moodHistory.length + favoriteMusic.length + watchedMedia.length + readCollection.length;
 
   const handleReplay = (vibe) => {
     navigate('/vibe', vibe?.prompt ? { state: { replayPrompt: vibe.prompt } } : undefined);
   };
 
-  const handleRemoveFavorite = async (id) => {
+  const handleRemoveFavorite = async (item) => {
+    const id = item?._id || getItemKey(item);
     try {
       await api.delete(`/favorites/${id}`);
       setFavorites((prev) => prev.filter((item) => item._id !== id));
@@ -587,14 +654,34 @@ const DashboardPage = () => {
     }
   };
 
-  const handleRemoveWatched = (key) => {
-    const next = watched.filter((item) => getItemKey(item) !== key);
+  const handleRemoveWatched = async (item) => {
+    const key = getCollectionIdentity(item);
+    if (item?._id) {
+      try {
+        await api.delete(`/collections/${item._id}`);
+        setCollectionItems((prev) => prev.filter((collectionItem) => collectionItem._id !== item._id));
+      } catch {
+        toast.error(tr ? 'Kaldırılamadı' : 'Could not remove');
+        return;
+      }
+    }
+    const next = watched.filter((watchedItem) => getCollectionIdentity(watchedItem) !== key);
     setWatched(next);
     writeUserScopedJson(WATCHED_KEY, userId, next);
   };
 
-  const handleRemoveRead = (key) => {
-    const next = readBooks.filter((item) => getItemKey(item) !== key);
+  const handleRemoveRead = async (item) => {
+    const key = getCollectionIdentity(item);
+    if (item?._id) {
+      try {
+        await api.delete(`/collections/${item._id}`);
+        setCollectionItems((prev) => prev.filter((collectionItem) => collectionItem._id !== item._id));
+      } catch {
+        toast.error(tr ? 'Kaldırılamadı' : 'Could not remove');
+        return;
+      }
+    }
+    const next = readBooks.filter((bookItem) => getCollectionIdentity(bookItem) !== key);
     setReadBooks(next);
     writeUserScopedJson(READ_KEY, userId, next);
   };
@@ -637,7 +724,7 @@ const DashboardPage = () => {
       <Collections
         favoriteMusic={favoriteMusic}
         watchedMedia={watchedMedia}
-        readBooks={readBooks}
+        readBooks={readCollection}
         onRemoveFavorite={handleRemoveFavorite}
         onRemoveWatched={handleRemoveWatched}
         onRemoveRead={handleRemoveRead}

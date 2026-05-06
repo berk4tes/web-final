@@ -16,7 +16,7 @@ const AvatarFace = ({ preset, className = '' }) => (
 );
 
 const InitialAvatar = ({ name, className = '' }) => (
-  <span className={`grid place-items-center rounded-full bg-gradient-to-br from-accent via-rose-300 to-amber-200 font-bold text-white ${className}`}>
+  <span className={`grid place-items-center overflow-hidden rounded-full bg-gradient-to-br from-accent via-rose-300 to-amber-200 font-bold text-white ${className}`}>
     {(name?.[0] || 'U').toUpperCase()}
   </span>
 );
@@ -27,12 +27,14 @@ const UserAvatar = ({ value, name, className = 'h-10 w-10', onError }) => {
 
   if (value) {
     return (
-      <img
-        src={value}
-        alt={name || 'Avatar'}
-        className={`rounded-full object-cover ${className}`}
-        onError={onError}
-      />
+      <span className={`block overflow-hidden rounded-full ${className}`}>
+        <img
+          src={value}
+          alt={name || 'Avatar'}
+          className="h-full w-full rounded-full object-cover"
+          onError={onError}
+        />
+      </span>
     );
   }
 
