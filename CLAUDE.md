@@ -250,6 +250,19 @@ npm run dev            # http://localhost:5173
 > Her değişiklik bu bölüme yeni entry olarak en üstten eklenir.
 > Format: `### [YYYY-MM-DD] başlık` + bullet'lar.
 
+### [2026-05-06] Moodboard — regen button aligned to header row, canvas height reduced
+
+- **mood-frontend/src/pages/MoodboardPage.jsx** — Moved "Regenerate moodboard" button back into `mb-prompt-header` (right side, same row as "Moodboard for [prompt] [Edit mood]"). Removed regen button from top of `mb-panel`. Reduced `CH` (canvas internal height) from 840 → 700 to shorten the poster canvas and bring it closer to the panel height.
+- **mood-frontend/src/index.css** — Changed `.mb-editor` from `align-items: flex-start` to `align-items: stretch` so both columns have equal height. Removed old `.mb-regen-panel` rule. Updated `.mb-panel`: added `align-self: flex-start` (panel card stays compact), kept sticky positioning, changed `max-height` from `calc(100vh - 7rem)` to `calc(100vh - 5.5rem)` for more visible panel content.
+- **Build:** `vite build` → 113 modules, 255kB CSS, 351kB JS, 0 errors.
+
+### [2026-05-06] Moodboard — prompt header moved full-width, regen button to panel top
+
+- **mood-frontend/src/pages/MoodboardPage.jsx** — Moved `<header className="mb-prompt-header">` out of `mb-canvas-col` (where it was pushing the canvas down) and placed it as a full-width element above the `mb-editor` flex row. Removed the inline regen button from the header. Added "Regenerate moodboard" button at the very top of `mb-panel` with class `mb-regen-panel`, so it sits on the right side aligned with the panel's top edge.
+- **mood-frontend/src/index.css** — Added `.mb-regen-panel { width: 100%; justify-content: center; }` so the regen button fills the panel width.
+- **Result:** canvas top edge and panel top edge are now identical (both start right below the shared prompt header). Regen button is on the right side above the editorial options.
+- **Build:** `vite build` → 113 modules, 250kB CSS, 351kB JS, 0 errors.
+
 ### [2026-05-05] Moodboard flow connected to Vibe page prompt
 
 - **mood-frontend/src/pages/VibePage.jsx** — Added `useNavigate` import + `navigate` declaration. Added `vibe-moodboard-teaser` section just before the closing `</>` of the `vibeData && !loading` block. The teaser shows up to 4 rotated movie/book poster thumbnails (from already-loaded `visibleMovies`/`visibleBooks`), 3 mood palette dots (from `theme.accent`/`theme.soft`/`theme.ink`), and an "Open Moodboard Studio" button that calls `navigate('/moodboard')`. No extra API calls — all images come from existing vibe data.

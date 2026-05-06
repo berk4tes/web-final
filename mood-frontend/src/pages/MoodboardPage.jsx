@@ -6,7 +6,7 @@ import api from '../services/api';
 
 /* ─── Canvas dimensions (poster format) ─────────────── */
 const CW = 600;
-const CH = 840;
+const CH = 700;
 
 /* ─── Per-layout image slot positions ───────────────── */
 const LAYOUT_SLOTS = {
@@ -684,52 +684,51 @@ const MoodboardPage = () => {
     <div className="mb-page">
       <h1 className="mb-page-title">Moodboard</h1>
 
-      {/* ── Editor (always present so header aligns with canvas) ── */}
+      {/* Prompt header — full width, above the two-column editor */}
+      <header className="mb-prompt-header">
+        <div className="mb-prompt-meta">
+          <span className="mb-prompt-label">Moodboard for</span>
+          {editing ? (
+            <div className="mb-prompt-edit-row">
+              <textarea
+                className="mb-prompt-edit-input"
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                rows={2}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleEditSave(); }}
+              />
+              <div className="mb-prompt-edit-actions">
+                <button className="mb-prompt-save-btn" onClick={handleEditSave} disabled={!editDraft.trim()}>
+                  Generate
+                </button>
+                <button className="mb-prompt-cancel-btn" onClick={() => { setEditing(false); setEditDraft(activePrompt); }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-prompt-pill-row">
+              <span className="mb-prompt-pill">{activePrompt}</span>
+              <button className="mb-prompt-edit-btn" onClick={() => { setEditing(true); setEditDraft(activePrompt); }}>
+                Edit mood
+              </button>
+            </div>
+          )}
+        </div>
+        {!editing && (
+          <button className="mb-regen-btn" onClick={handleRegenerate} disabled={loading}>
+            {loading ? <span className="mb-spinner" aria-hidden /> : null}
+            {loading ? 'Generating…' : 'Regenerate moodboard'}
+          </button>
+        )}
+      </header>
+
+      {/* ── Editor ── */}
       <div className="mb-editor">
 
-        {/* Canvas column — ref here so ResizeObserver fires on mount, not when mbData loads */}
+        {/* Canvas column — ref here so ResizeObserver fires on mount */}
         <div className="mb-canvas-col" ref={containerRef}>
-
-          {/* Prompt header */}
-          <header className="mb-prompt-header">
-            <div className="mb-prompt-meta">
-              <span className="mb-prompt-label">Moodboard for</span>
-              {editing ? (
-                <div className="mb-prompt-edit-row">
-                  <textarea
-                    className="mb-prompt-edit-input"
-                    value={editDraft}
-                    onChange={(e) => setEditDraft(e.target.value)}
-                    rows={2}
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleEditSave(); }}
-                  />
-                  <div className="mb-prompt-edit-actions">
-                    <button className="mb-prompt-save-btn" onClick={handleEditSave} disabled={!editDraft.trim()}>
-                      Generate
-                    </button>
-                    <button className="mb-prompt-cancel-btn" onClick={() => { setEditing(false); setEditDraft(activePrompt); }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-prompt-pill-row">
-                  <span className="mb-prompt-pill">{activePrompt}</span>
-                  <button className="mb-prompt-edit-btn" onClick={() => { setEditing(true); setEditDraft(activePrompt); }}>
-                    Edit mood
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {!editing && (
-              <button className="mb-regen-btn" onClick={handleRegenerate} disabled={loading}>
-                {loading ? <span className="mb-spinner" aria-hidden /> : null}
-                {loading ? 'Generating…' : 'Regenerate moodboard'}
-              </button>
-            )}
-          </header>
 
           {/* Loading */}
           {loading && (
@@ -779,7 +778,7 @@ const MoodboardPage = () => {
 
         {/* ── Panel (editorial sidebar card) ── */}
         {mbData && !loading && (
-          <aside className="mb-panel">
+          <aside className="mb-panel" style={{ maxHeight: CH * scale }}>
 
             {/* Photo library */}
             <div className="mb-panel-block">

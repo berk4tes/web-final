@@ -2972,12 +2972,21 @@
     rgba(255,255,255,0.035);
   padding: 1rem;
   text-align: left;
-  transition: background-color 240ms ease, transform 240ms ease;
+  transition: background 240ms ease, border-color 240ms ease, box-shadow 240ms ease, color 240ms ease, transform 240ms ease;
 }
 
 .dash-recent-item:hover {
   transform: translateY(-4px);
-  background-color: color-mix(in srgb, var(--recent-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--recent-accent) 16%, var(--dash-card-strong));
+  border-color: color-mix(in srgb, var(--recent-accent) 55%, transparent);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--recent-accent) 22%, transparent);
+}
+.dash-recent-item:hover :where(strong) {
+  color: var(--recent-accent);
+}
+.dash-recent-item:hover :where(span),
+.dash-recent-item:hover :where(small) {
+  color: color-mix(in srgb, var(--recent-accent) 70%, var(--dash-dim));
 }
 
 .dash-recent-item span, .dash-recent-item small {
@@ -3057,7 +3066,14 @@
   background: rgba(255,255,255,0.035);
   color: rgba(255,247,234,0.58);
   text-align: left;
-  transition: background-color 220ms ease, color 220ms ease;
+  transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+.dash-collection-tabs button:not(.is-active):hover {
+  background: color-mix(in srgb, var(--dash-accent) 12%, var(--dash-card-strong));
+  border-color: color-mix(in srgb, var(--dash-accent) 40%, transparent);
+  color: var(--dash-fg);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--dash-accent) 16%, transparent);
+  transform: translateY(-2px);
 }
 
 .dash-collection-tabs button.is-active {
@@ -10750,7 +10766,7 @@
 .mb-editor {
   display: flex;
   gap: 1.8rem;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .mb-canvas-col {
@@ -10840,11 +10856,8 @@
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
-  max-height: calc(100vh - 7rem);
   overflow-y: auto;
   backdrop-filter: blur(10px);
-  position: sticky;
-  top: 4.5rem;
 }
 .theme-dark .mb-panel {
   background: rgba(28,26,22,0.9);
