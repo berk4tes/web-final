@@ -59,7 +59,7 @@ const Navbar = () => {
 
         {/* Desktop nav */}
         {isAuthenticated && (
-          <nav className="nav-pill-shell hidden flex-1 items-center justify-center gap-1.5 lg:flex">
+          <nav className="nav-pill-shell hidden flex-1 items-center justify-center gap-1.5 md:flex">
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
