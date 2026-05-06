@@ -248,6 +248,14 @@ const getSeasonContentType = (shelf, title) => {
 
 const seasonalCoverCache = new Map();
 
+const getOpenLibraryCover = async (title) => {
+  const query = encodeURIComponent(title);
+  const res = await fetch(`https://openlibrary.org/search.json?title=${query}&limit=1`);
+  const data = await res.json();
+  const coverId = data?.docs?.[0]?.cover_i;
+  return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : '';
+};
+
 const getSeasonalCover = async (draft) => {
   if (!draft?.title) return '';
   const cacheKey = `${draft.contentType}:${draft.title}`;
@@ -262,11 +270,16 @@ const getSeasonalCover = async (draft) => {
     return cover;
   }
   if (draft.contentType === 'book') {
-    const query = encodeURIComponent(draft.title);
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&printType=books`);
-    const data = await res.json();
-    const imageLinks = data?.items?.[0]?.volumeInfo?.imageLinks || {};
-    cover = (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+    try {
+      const query = encodeURIComponent(draft.title);
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&printType=books`);
+      const data = await res.json();
+      const imageLinks = data?.items?.[0]?.volumeInfo?.imageLinks || {};
+      cover = (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+    } catch {
+      cover = '';
+    }
+    if (!cover) cover = await getOpenLibraryCover(draft.title);
     seasonalCoverCache.set(cacheKey, cover);
     return cover;
   }

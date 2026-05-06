@@ -350,7 +350,10 @@ const RecentMoods = ({ savedVibes, recentMoods, history, onReplay, language }) =
           {tr ? 'İlk mood araman burada görünecek.' : 'Your first mood search will appear here.'}
         </div>
       ) : (
-        <div className="dash-recent-rail">
+        <div
+          className={`dash-recent-rail${timeline.length > 5 ? ' has-overflow' : ''}`}
+          style={{ '--recent-count': timeline.length || 1 }}
+        >
           {timeline.map((entry, index) => {
             const color = getVibeColor(entry.moodKey);
             return (

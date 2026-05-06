@@ -87,61 +87,60 @@ const Navbar = () => {
         {/* Mobile hamburger */}
         <button
           aria-label={tr ? 'Menüyü aç/kapat' : 'Toggle menu'}
-          className="nav-hamburger lg:hidden"
+          aria-expanded={open}
+          className={`nav-hamburger lg:hidden ${open ? 'is-open' : ''}`}
           onClick={() => setOpen((v) => !v)}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            {open
-              ? <path d="M6 6l12 12M6 18L18 6" />
-              : <path d="M4 7h16M4 12h16M4 17h16" />}
+          <svg className="nav-hamburger-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path className="nav-line nav-line-top" d="M4 7h16" />
+            <path className="nav-line nav-line-middle" d="M4 12h16" />
+            <path className="nav-line nav-line-bottom" d="M4 17h16" />
           </svg>
         </button>
       </div>
 
       {/* Mobile menu */}
-      {open && (
-        <div className="nav-mobile-drawer lg:hidden">
-          <div className="mx-auto max-w-[92rem] space-y-1 px-4 py-3">
-            {isAuthenticated ? (
-              <>
-                {NAV_ITEMS.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setOpen(false)}
-                    className={({ isActive }) =>
-                      isActive ? 'nav-mobile-item-active' : 'nav-mobile-item'
-                    }
-                  >
-                    {item.label || t(item.key)}
-                  </NavLink>
-                ))}
+      <div className={`nav-mobile-drawer lg:hidden ${open ? 'is-open' : ''}`} aria-hidden={!open}>
+        <div className="mx-auto max-w-[92rem] space-y-1 px-4 py-3">
+          {isAuthenticated ? (
+            <>
+              {NAV_ITEMS.map((item) => (
                 <NavLink
-                  to="/profile"
+                  key={item.to}
+                  to={item.to}
                   onClick={() => setOpen(false)}
                   className={({ isActive }) =>
                     isActive ? 'nav-mobile-item-active' : 'nav-mobile-item'
                   }
                 >
-                  {t('navProfile')}
+                  {item.label || t(item.key)}
                 </NavLink>
-                <button onClick={handleLogout} className="nav-mobile-item w-full text-left">
-                  {t('signOut')}
-                </button>
-              </>
-            ) : (
-              <>
-                <NavLink to="/login" onClick={() => setOpen(false)} className="nav-mobile-item">
-                  {t('signIn')}
-                </NavLink>
-                <NavLink to="/register" onClick={() => setOpen(false)} className="nav-mobile-item-active">
-                  {t('getStarted')}
-                </NavLink>
-              </>
-            )}
-          </div>
+              ))}
+              <NavLink
+                to="/profile"
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  isActive ? 'nav-mobile-item-active' : 'nav-mobile-item'
+                }
+              >
+                {t('navProfile')}
+              </NavLink>
+              <button onClick={handleLogout} className="nav-mobile-item w-full text-left">
+                {t('signOut')}
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login" onClick={() => setOpen(false)} className="nav-mobile-item">
+                {t('signIn')}
+              </NavLink>
+              <NavLink to="/register" onClick={() => setOpen(false)} className="nav-mobile-item-active">
+                {t('getStarted')}
+              </NavLink>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </header>
   );
 };

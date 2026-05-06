@@ -257,9 +257,17 @@ const MoodboardPage = () => {
   useEffect(() => { scaleRef.current = scale; }, [scale]);
 
   useEffect(() => {
+    const getResponsiveScale = (width) => {
+      const rawScale = width / CW;
+      if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+        return Math.min(1, rawScale);
+      }
+      return rawScale;
+    };
+
     const obs = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
-      if (w > 0) setScale(w / CW);
+      if (w > 0) setScale(getResponsiveScale(w));
     });
     if (containerRef.current) obs.observe(containerRef.current);
     return () => obs.disconnect();

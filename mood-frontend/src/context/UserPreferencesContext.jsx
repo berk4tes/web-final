@@ -22,9 +22,17 @@ const DEFAULT_PREFS = {
   recPrefs: REC_PREFS_DEFAULTS,
 };
 
+const getSystemAppearance = () => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return DEFAULT_PREFS.appearance;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
 const normalizePrefs = (stored = {}) => ({
   ...DEFAULT_PREFS,
   ...stored,
+  appearance: stored.appearance === 'dark' || stored.appearance === 'light'
+    ? stored.appearance
+    : getSystemAppearance(),
   recPrefs: { ...REC_PREFS_DEFAULTS, ...(stored.recPrefs || {}) },
 });
 
