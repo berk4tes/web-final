@@ -3648,8 +3648,10 @@
   min-height: 12rem;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.45rem;
+  overflow: hidden;
   border: 1px solid transparent;
   border-radius: 999px 999px 1.4rem 1.4rem;
   background:
@@ -3657,7 +3659,7 @@
     var(--mot-glass);
   padding: 1rem;
   color: var(--mot-sub);
-  text-align: left;
+  text-align: center;
   transition: transform 220ms ease, background-color 220ms ease, border-color 220ms ease;
 }
 
@@ -3675,10 +3677,12 @@
 }
 
 .mot-v3-moods strong {
-  font-size: 0.78rem;
+  font-size: clamp(0.62rem, 0.72vw, 0.76rem);
   font-weight: 950;
+  line-height: 1.1;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 :where(.mot-v3-quest-grid),
@@ -3778,10 +3782,10 @@
 
 .mot-v3-shelf button, .mot-v3-chat button {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) 6.5rem;
+  grid-template-columns: 2.2rem 3.7rem minmax(0, 1fr) 6.5rem;
   align-items: center;
   gap: 0.9rem;
-  min-height: 5rem;
+  min-height: 6.6rem;
   border: 1px solid var(--mot-rule);
   border-radius: 1.2rem;
   background: var(--mot-glass);
@@ -3802,7 +3806,26 @@
   background: color-mix(in srgb, var(--mot-accent) 13%, var(--mot-glass-strong));
 }
 
-.mot-v3-shelf span, .mot-v3-shelf em, .mot-v3-chat span, .mot-v3-chat em {
+.mot-v3-shelf button.is-picked {
+  border-color: color-mix(in srgb, var(--mot-accent) 68%, var(--mot-rule));
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--mot-accent) 30%, transparent), transparent 46%),
+    color-mix(in srgb, var(--mot-accent) 18%, var(--mot-glass-strong));
+  color: var(--mot-fg);
+}
+
+.mot-v3-shelf button.is-picked em {
+  color: color-mix(in srgb, var(--mot-accent) 76%, var(--mot-fg));
+}
+
+.theme-dark .mot-v3-shelf button.is-picked {
+  border-color: color-mix(in srgb, var(--mot-accent) 58%, rgba(255,255,255,0.18));
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--mot-accent) 24%, transparent), transparent 46%),
+    color-mix(in srgb, var(--mot-accent) 18%, rgba(255,255,255,0.055));
+}
+
+.mot-v3-shelf span:not(.mot-v3-shelf-cover), .mot-v3-shelf em, .mot-v3-chat span, .mot-v3-chat em {
   color: var(--mot-dim);
   font-size: 0.74rem;
   font-style: normal;
@@ -3818,6 +3841,44 @@
   font-weight: 900;
   line-height: 1.25;
   text-overflow: ellipsis;
+}
+
+.mot-v3-shelf-cover {
+  position: relative;
+  display: block;
+  width: 3.7rem;
+  aspect-ratio: 0.72;
+  overflow: hidden;
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--mot-accent) 42%, #fff7ea), color-mix(in srgb, var(--mot-ink) 42%, #1a1714));
+  box-shadow: 0 10px 26px rgba(22,19,16,0.14);
+}
+
+.mot-v3-shelf-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mot-v3-shelf-cover i {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: rgba(255,255,255,0.86);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.mot-v3-shelf small {
+  grid-column: 3;
+  color: color-mix(in srgb, var(--mot-accent) 70%, var(--mot-fg));
+  font-size: 0.78rem;
+  font-weight: 850;
 }
 
 .mot-v3-chat em {
@@ -3844,8 +3905,9 @@
 
 .mot-v3-badge-grid div.is-unlocked {
   background:
-    radial-gradient(circle at 70% 10%, color-mix(in srgb, var(--mot-accent) 28%, transparent), transparent 46%),
-    color-mix(in srgb, var(--mot-accent) 14%, var(--mot-glass-strong));
+    radial-gradient(circle at 70% 10%, color-mix(in srgb, var(--mot-accent) 30%, transparent), transparent 46%),
+    color-mix(in srgb, var(--mot-accent) 17%, var(--mot-glass-strong));
+  border-color: color-mix(in srgb, var(--mot-accent) 42%, var(--mot-rule));
 }
 
 .mot-v3-badge-grid span, .mot-v3-badge-grid em {
@@ -3920,10 +3982,17 @@
   }
 
   .mot-v3-quest-grid,
-  .mot-v3-shelf button,
   .mot-v3-chat button,
   .mot-v3-leader-rows div {
     grid-template-columns: 1fr;
+  }
+
+  .mot-v3-shelf button {
+    grid-template-columns: 2rem 3.3rem minmax(0, 1fr);
+  }
+
+  .mot-v3-shelf button em {
+    grid-column: 3;
   }
 
   .mot-v3-quest-grid,
@@ -9538,17 +9607,20 @@
   max-width: 13ch;
   color: transparent;
   background:
-    linear-gradient(90deg, #1f1d18, color-mix(in srgb, var(--mood-accent-live) 70%, #ff4f9a), #1f1d18);
+    linear-gradient(90deg, #1f1d18, color-mix(in srgb, var(--mood-accent-live) 70%, #ff4f9a), #17d6b0, #ffd66b, #1f1d18);
+  background-size: 280% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   font-family: 'Space Grotesk', Inter, ui-sans-serif, system-ui, sans-serif;
   font-weight: 820;
   text-transform: none;
+  animation: vibeTitleGradient 5.8s ease-in-out infinite;
 }
 
 .theme-dark .vibe-zero-shell :where(.zero-title) {
   background:
     linear-gradient(90deg, #fff8ed, #91ffe8, #ff7aa8, #fff8ed);
+  background-size: 280% 100%;
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -9556,6 +9628,13 @@
 .vibe-zero-shell :where(.zero-title)::after {
   height: 0.32rem;
   background: linear-gradient(90deg, #ff4f9a, #ffd66b, #58dfc2, var(--mood-accent-live));
+  background-size: 240% 100%;
+  animation: vibeTitleGradient 4.2s ease-in-out infinite reverse;
+}
+
+@keyframes vibeTitleGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .vibe-loading-state {
@@ -10068,12 +10147,21 @@
   border: 0.8rem solid rgba(255,255,255,0.72);
   border-radius: 50%;
   color: #1f1d18;
-  background:
-    conic-gradient(from -30deg, #ff5c7a 0 16.66%, #ffd66b 16.66% 33.32%, #58dfc2 33.32% 49.98%, #7c8cff 49.98% 66.64%, #ff9f6e 66.64% 83.3%, #c37bff 83.3% 100%);
+  background: #fff8ed;
   box-shadow:
     0 24px 80px rgba(31,29,24,0.16),
     inset 0 0 0 1px rgba(255,255,255,0.5);
   transition: transform 220ms ease;
+}
+
+.vibe-wheel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    conic-gradient(from -30deg, #ff5c7a 0 16.66%, #ffd66b 16.66% 33.32%, #58dfc2 33.32% 49.98%, #7c8cff 49.98% 66.64%, #ff9f6e 66.64% 83.3%, #c37bff 83.3% 100%);
+  will-change: transform;
 }
 
 .vibe-wheel:hover {
@@ -10081,6 +10169,10 @@
 }
 
 .vibe-wheel.is-spinning {
+  transform: scale(1.02);
+}
+
+.vibe-wheel.is-spinning::before {
   animation: vibeWheelSpin 950ms cubic-bezier(.2,.8,.18,1) both;
 }
 
@@ -10089,6 +10181,7 @@
   left: 50%;
   top: 50%;
   display: block;
+  z-index: 2;
   pointer-events: none;
   transform: rotate(calc(var(--slice) * 60deg)) translateY(-8.2rem) rotate(calc(var(--slice) * -60deg));
   transform-origin: 0 0;
@@ -10110,7 +10203,7 @@
 
 .vibe-wheel strong {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   width: 38%;
   aspect-ratio: 1;
@@ -10459,6 +10552,11 @@
   padding: 2rem clamp(1rem, 4vw, 2.5rem) 5rem;
   max-width: 92rem;
   margin: 0 auto;
+  color: var(--ink, #1f1d18);
+}
+
+.theme-dark .mb-page {
+  color: #f5f0e8;
 }
 
 /* Page title — matches other main page headings */
@@ -10621,7 +10719,7 @@
   border-radius: 50%;
   border: 2px solid rgba(0,0,0,0.15);
   border-top-color: #1a1a1a;
-  animation: spin 0.7s linear infinite;
+  animation: mbSpin 0.7s linear infinite;
   display: inline-block;
 }
 .theme-dark .mb-spinner { border-color: rgba(255,255,255,0.2); border-top-color: #f5f0e8; }
@@ -10633,16 +10731,20 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 4rem 0;
+  padding: 7rem 0 4rem;
 }
 .mb-loader-orb {
   width: 72px; height: 72px;
   border-radius: 50%;
   background: conic-gradient(from 0deg, #c89868, #e6b54a, #6dbb8a, #6c8ec9, #b693d8, #c89868);
-  animation: spin 2.2s linear infinite;
+  animation: mbSpin 1.25s linear infinite;
   opacity: 0.6;
 }
 .mb-loader p { font-size: 0.9rem; opacity: 0.5; font-style: italic; }
+
+@keyframes mbSpin {
+  to { transform: rotate(360deg); }
+}
 
 /* ── Editor layout ───────────────────────────────── */
 .mb-editor {
@@ -10662,10 +10764,16 @@
 .mb-canvas-container { width: 100%; }
 
 .mb-canvas {
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
   position: relative;
+}
+
+.theme-dark .mb-canvas {
+  border-color: rgba(255,255,255,0.16);
+  box-shadow: 0 18px 70px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.28);
 }
 
 /* Subtle paper texture */
@@ -10827,6 +10935,69 @@
 }
 .mb-sticker-btn:hover { background: rgba(0,0,0,0.07); transform: scale(1.2); }
 .theme-dark .mb-sticker-btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
+
+.mb-upload-input {
+  display: none;
+}
+
+.mb-upload-btn {
+  width: 100%;
+  min-height: 3.2rem;
+  border: 1px dashed rgba(0,0,0,0.2);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255,255,255,0.7), transparent 42%),
+    color-mix(in srgb, var(--mood-accent, #c89868) 12%, rgba(255,255,255,0.82));
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 760;
+  cursor: pointer;
+  transition: transform 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.mb-upload-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--mood-accent, #c89868) 52%, rgba(0,0,0,0.12));
+}
+
+.theme-dark .mb-upload-btn {
+  border-color: rgba(255,255,255,0.18);
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255,255,255,0.08), transparent 42%),
+    rgba(255,255,255,0.07);
+}
+
+.mb-accent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.mb-accent-btn {
+  min-height: 4.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, rgba(0,0,0,0.12));
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--accent-color) 24%, transparent), transparent 60%),
+    rgba(255,255,255,0.78);
+  color: var(--accent-color);
+  font-size: 2.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.14s, background 0.14s, border-color 0.14s;
+}
+
+.mb-accent-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: color-mix(in srgb, var(--accent-color) 54%, rgba(0,0,0,0.12));
+}
+
+.theme-dark .mb-accent-btn {
+  background:
+    radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 60%),
+    rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.14);
+}
 
 /* ── Washi tape buttons ──────────────────────────── */
 .mb-tape-grid {

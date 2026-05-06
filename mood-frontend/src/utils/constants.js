@@ -90,12 +90,12 @@ export const VIBE_COLORS = {
 };
 
 export const VIBE_PROMPT_EXAMPLES = [
-  'Autumn coffee and old notebooks',
   'Sad but peaceful late-night drive',
   'Dark feminine gym energy',
   'A sunlit Sunday in a Parisian café',
   'Heartbreak sleeping under string lights',
   'Cozy attic during a thunderstorm',
+  'Rainy bookstore and handwritten letters',
 ];
 
 // Mood-responsive prompt suggestions — shown after a vibe is interpreted.
@@ -113,7 +113,7 @@ export const MOOD_PROMPT_SUGGESTIONS = {
     'Standing alone at the ocean\'s edge',
   ],
   nostalgic: [
-    'Autumn coffee and old notebooks',
+    'Rainy bookstore and handwritten letters',
     'Dusty photographs from childhood summers',
     'The smell of your grandparents\' kitchen',
     'Polaroids from a summer you can\'t forget',

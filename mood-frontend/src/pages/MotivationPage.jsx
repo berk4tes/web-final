@@ -127,6 +127,13 @@ const localDateKey = (value = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizeTitle = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+const uniqueList = (items = []) => [...new Set(items.filter(Boolean))];
+
 const EMPTY_GAME_STATE = { xp: 0, checkins: [], tasksByDay: {} };
 
 const readGameState = (userId) => {
@@ -164,6 +171,12 @@ const moodApiLabel = (moodId) => {
   return moodId;
 };
 
+const moodIdFromApiLabel = (label) => {
+  if (label === 'angry') return 'intense';
+  if (label === 'sad') return 'dreamy';
+  return label;
+};
+
 const getSeasonKey = (date = new Date()) => {
   const month = date.getMonth();
   if (month >= 2 && month <= 4) return 'spring';
@@ -178,6 +191,13 @@ const seasonColorKey = (seasonKey) => ({
   autumn: 'nostalgic',
   winter: 'sad',
 }[seasonKey] || 'calm');
+
+const seasonName = (seasonKey, tr) => ({
+  spring: tr ? 'İlkbahar' : 'Spring',
+  summer: tr ? 'Yaz' : 'Summer',
+  autumn: tr ? 'Sonbahar' : 'Autumn',
+  winter: tr ? 'Kış' : 'Winter',
+}[seasonKey] || (tr ? 'Sezon' : 'Season'));
 
 const contentTypeLabel = (type, tr) => ({
   movie: tr ? 'film' : 'movie',
@@ -220,26 +240,43 @@ const writeSeasonalProgress = (userId, progress) => {
 
 const getSeasonItemKey = (seasonKey, shelf, title) => `${seasonKey}:${shelf}:${title}`;
 
+const getSeasonContentType = (shelf, title) => {
+  if (shelf === 'movies') return SERIES_TITLES.has(title) ? 'series' : 'movie';
+  if (shelf === 'reads') return 'book';
+  return 'music';
+};
+
+const seasonalCoverCache = new Map();
+
 const getSeasonalCover = async (draft) => {
   if (!draft?.title) return '';
+  const cacheKey = `${draft.contentType}:${draft.title}`;
+  if (seasonalCoverCache.has(cacheKey)) return seasonalCoverCache.get(cacheKey);
+  let cover = '';
   if (draft.contentType === 'movie' || draft.contentType === 'series') {
     const { data } = await api.get('/recommendations/tmdb/details', {
       params: { title: draft.title, contentType: draft.contentType },
     });
-    return data?.data?.details?.poster || '';
+    cover = data?.data?.details?.poster || '';
+    seasonalCoverCache.set(cacheKey, cover);
+    return cover;
   }
   if (draft.contentType === 'book') {
     const query = encodeURIComponent(draft.title);
     const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&printType=books`);
     const data = await res.json();
     const imageLinks = data?.items?.[0]?.volumeInfo?.imageLinks || {};
-    return (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+    cover = (imageLinks.thumbnail || imageLinks.smallThumbnail || '').replace(/^http:/, 'https:');
+    seasonalCoverCache.set(cacheKey, cover);
+    return cover;
   }
   if (draft.contentType === 'music') {
     const query = encodeURIComponent(draft.title);
     const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=1`);
     const data = await res.json();
-    return (data?.results?.[0]?.artworkUrl100 || '').replace('100x100bb', '600x600bb');
+    cover = (data?.results?.[0]?.artworkUrl100 || '').replace('100x100bb', '600x600bb');
+    seasonalCoverCache.set(cacheKey, cover);
+    return cover;
   }
   return '';
 };
@@ -364,6 +401,68 @@ const SpringReviewModal = ({
   );
 };
 
+const SeasonalShelfItem = ({
+  title,
+  index,
+  seasonKey,
+  shelf,
+  done,
+  review,
+  language,
+  onSelect,
+}) => {
+  const [coverUrl, setCoverUrl] = useState('');
+  const tr = language === 'tr';
+  const contentType = getSeasonContentType(shelf, title);
+  const reviewEmotionLabel = REVIEW_EMOTIONS.find((item) => item.id === review?.emotion)?.label?.[language];
+  const rateLabel = shelf === 'movies'
+    ? (tr ? 'izledim, puanla' : 'rate watched')
+    : shelf === 'reads'
+      ? (tr ? 'okudum, puanla' : 'rate read')
+      : (tr ? 'dinledim, puanla' : 'rate listened');
+  const actionLabel = done
+    ? (review ? (tr ? 'puanlandı' : 'rated') : rateLabel)
+    : shelf === 'movies'
+      ? (tr ? 'izledim' : 'mark watched')
+      : shelf === 'reads'
+        ? (tr ? 'okudum' : 'mark read')
+        : (tr ? 'dinledim' : 'mark listened');
+
+  useEffect(() => {
+    let active = true;
+    setCoverUrl('');
+    getSeasonalCover({ seasonKey, shelf, title, contentType })
+      .then((url) => {
+        if (active) setCoverUrl(url || '');
+      })
+      .catch(() => {
+        if (active) setCoverUrl('');
+      });
+    return () => { active = false; };
+  }, [contentType, seasonKey, shelf, title]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(shelf, title)}
+      className={done ? 'is-picked' : ''}
+    >
+      <span className="mot-v3-shelf-index">{String(index + 1).padStart(2, '0')}</span>
+      <span className="mot-v3-shelf-cover">
+        {coverUrl ? <img src={coverUrl} alt="" loading="lazy" /> : <i>{title.slice(0, 1)}</i>}
+      </span>
+      <strong>{title}</strong>
+      {review ? (
+        <small>
+          {'★'.repeat(review.rating)}
+          {reviewEmotionLabel ? ` · ${reviewEmotionLabel}` : ''}
+        </small>
+      ) : null}
+      <em>{actionLabel}</em>
+    </button>
+  );
+};
+
 const MotivationPage = () => {
   const { user } = useAuth();
   const { prefs, t } = useUserPreferences();
@@ -379,6 +478,9 @@ const MotivationPage = () => {
   const [roomPick, setRoomPick] = useState('');
   const [seasonalProgress, setSeasonalProgress] = useState(() => readSeasonalProgress(userId));
   const [savedVibes, setSavedVibes] = useState(() => readJsonArray(SAVED_VIBES_KEY, userId));
+  const [collectionItems, setCollectionItems] = useState({ watched: [], reads: [], music: [] });
+  const [moodLogCheckins, setMoodLogCheckins] = useState([]);
+  const [remoteStreak, setRemoteStreak] = useState(0);
   const [reviewDraft, setReviewDraft] = useState(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewEmotion, setReviewEmotion] = useState('');
@@ -395,9 +497,47 @@ const MotivationPage = () => {
     }
   };
 
+  const loadCollections = async () => {
+    const watchedItems = readJsonArray(WATCHED_KEY, userId);
+    const readItems = readJsonArray(READ_KEY, userId);
+    let musicItems = [];
+    try {
+      const { data } = await api.get('/favorites', { params: { limit: 100 } });
+      musicItems = (Array.isArray(data?.data?.items) ? data.data.items : [])
+        .filter((item) => item.contentType === 'music');
+    } catch {
+      musicItems = [];
+    }
+    setCollectionItems({ watched: watchedItems, reads: readItems, music: musicItems });
+  };
+
+  const loadMoodSignals = async () => {
+    try {
+      const [streakResult, historyResult] = await Promise.allSettled([
+        api.get('/stats/streak'),
+        api.get('/moods/history', { params: { limit: 80 } }),
+      ]);
+      if (streakResult.status === 'fulfilled') {
+        setRemoteStreak(Number(streakResult.value?.data?.data?.streak) || 0);
+      }
+      if (historyResult.status === 'fulfilled') {
+        const rows = historyResult.value?.data?.data?.items || [];
+        setMoodLogCheckins(rows.map((item) => ({
+          date: localDateKey(item.loggedAt || item.createdAt),
+          moodId: moodIdFromApiLabel(item.moodLabel),
+        })));
+      }
+    } catch {
+      setRemoteStreak(0);
+      setMoodLogCheckins([]);
+    }
+  };
+
   useEffect(() => {
     setSummaryLoading(true);
     loadSummary();
+    loadCollections();
+    loadMoodSignals();
   }, [userId]);
 
   useEffect(() => {
@@ -409,6 +549,8 @@ const MotivationPage = () => {
     setGame(readGameState(userId));
     setSeasonalProgress(readSeasonalProgress(userId));
     setSavedVibes(readJsonArray(SAVED_VIBES_KEY, userId));
+    loadCollections();
+    loadMoodSignals();
     setSummary(null);
     setSummaryLoading(true);
   }, [userId]);
@@ -418,6 +560,8 @@ const MotivationPage = () => {
       setGame(readGameState(userId));
       setSeasonalProgress(readSeasonalProgress(userId));
       setSavedVibes(readJsonArray(SAVED_VIBES_KEY, userId));
+      loadCollections();
+      loadMoodSignals();
     };
 
     window.addEventListener('storage', refreshLocalSignals);
@@ -428,14 +572,26 @@ const MotivationPage = () => {
     };
   }, [userId]);
 
+  const localTodayCheckin = game.checkins.find((item) => item.date === today);
+  const remoteTodayCheckin = moodLogCheckins.find((item) => item.date === today);
   const todayTasks = game.tasksByDay[today] || {};
   const remoteTasksToday = summary?.currentUser?.tasksToday || [];
-  const todayCheckin = game.checkins.find((item) => item.date === today);
+  const todayCheckin = localTodayCheckin || remoteTodayCheckin;
   const seasonProgress = seasonalProgress[seasonKey] || {};
+  const inferShelfProgress = (shelf, items) => {
+    const collectionTitles = new Set((items || []).map((item) => normalizeTitle(item.title)));
+    const collectionIds = new Set((items || []).map((item) => normalizeTitle(item.externalId)));
+    return (seasonRoom.shelves[shelf] || [])
+      .filter((title) => {
+        const normalized = normalizeTitle(title);
+        return collectionTitles.has(normalized) || [...collectionIds].some((id) => id.endsWith(normalized));
+      })
+      .map((title) => getSeasonItemKey(seasonKey, shelf, title));
+  };
   const seasonShelfProgress = {
-    movies: seasonProgress.movies || [],
-    music: seasonProgress.music || [],
-    reads: seasonProgress.reads || [],
+    movies: uniqueList([...(seasonProgress.movies || []), ...inferShelfProgress('movies', collectionItems.watched)]),
+    music: uniqueList([...(seasonProgress.music || []), ...inferShelfProgress('music', collectionItems.music)]),
+    reads: uniqueList([...(seasonProgress.reads || []), ...inferShelfProgress('reads', collectionItems.reads)]),
     emotions: seasonProgress.emotions || [],
   };
   const savedToday = savedVibes.some((vibe) => localDateKey(vibe.savedAt) === today);
@@ -463,9 +619,9 @@ const MotivationPage = () => {
     ...inferredTaskIds,
   ]), [awardedTaskIds, inferredTaskIds]);
 
-  const streak = calculateStreak(game.checkins);
+  const streak = Math.max(calculateStreak(game.checkins), calculateStreak(moodLogCheckins), remoteStreak);
   const activeMood = MOODS.find((mood) => mood.id === todayCheckin?.moodId) || MOODS[0];
-  const activeColor = getVibeColor(seasonColorKey(seasonKey));
+  const activeColor = getVibeColor(todayCheckin ? moodColorKey(todayCheckin.moodId) : seasonColorKey(seasonKey));
   const totalXp = summary?.currentUser?.xp ?? game.xp;
   const level = getLevel(totalXp);
   const currentLevelTitle = tr ? level.current.trTitle : level.current.title;
@@ -500,19 +656,19 @@ const MotivationPage = () => {
   const badgeRows = [
     {
       id: 'watch',
-      label: tr ? 'Spring ekran rozeti' : 'Spring Screen Badge',
+      label: tr ? `${seasonName(seasonKey, tr)} ekran rozeti` : `${seasonName(seasonKey, tr)} Screen Badge`,
       done: seasonShelfProgress.movies.length >= seasonRoom.shelves.movies.length,
       count: `${seasonShelfProgress.movies.length}/${seasonRoom.shelves.movies.length}`,
     },
     {
       id: 'listen',
-      label: tr ? 'Spring ses rozeti' : 'Spring Sound Badge',
+      label: tr ? `${seasonName(seasonKey, tr)} ses rozeti` : `${seasonName(seasonKey, tr)} Sound Badge`,
       done: seasonShelfProgress.music.length >= seasonRoom.shelves.music.length,
       count: `${seasonShelfProgress.music.length}/${seasonRoom.shelves.music.length}`,
     },
     {
       id: 'read',
-      label: tr ? 'Spring okuma rozeti' : 'Spring Reads Badge',
+      label: tr ? `${seasonName(seasonKey, tr)} okuma rozeti` : `${seasonName(seasonKey, tr)} Reads Badge`,
       done: seasonShelfProgress.reads.length >= seasonRoom.shelves.reads.length,
       count: `${seasonShelfProgress.reads.length}/${seasonRoom.shelves.reads.length}`,
     },
@@ -568,7 +724,9 @@ const MotivationPage = () => {
     if (todayCheckin) {
       setGame((prev) => ({
         ...prev,
-        checkins: prev.checkins.map((item) => item.date === today ? { ...item, moodId: mood.id } : item),
+        checkins: localTodayCheckin
+          ? prev.checkins.map((item) => item.date === today ? { ...item, moodId: mood.id } : item)
+          : [{ date: today, moodId: mood.id }, ...prev.checkins].slice(0, 60),
       }));
       toast.success(tr ? 'Bugünün moodu güncellendi' : 'Today’s mood updated');
       return;
@@ -607,11 +765,7 @@ const MotivationPage = () => {
     const currentSeason = seasonalProgress[seasonKey] || {};
     const currentShelf = currentSeason[shelf] || [];
     if (currentShelf.includes(key)) {
-      const contentType = shelf === 'movies'
-        ? (SERIES_TITLES.has(title) ? 'series' : 'movie')
-        : shelf === 'reads'
-          ? 'book'
-          : 'music';
+      const contentType = getSeasonContentType(shelf, title);
       const existingReview = reviewByItemKey.get(key);
       setReviewDraft({ seasonKey, shelf, title, contentType });
       setReviewRating(existingReview?.rating || 0);
@@ -631,7 +785,7 @@ const MotivationPage = () => {
     writeSeasonalProgress(userId, nextProgress);
 
     if (shelf === 'movies') {
-      const contentType = SERIES_TITLES.has(title) ? 'series' : 'movie';
+      const contentType = getSeasonContentType(shelf, title);
       const existing = readJsonArray(WATCHED_KEY, userId);
       const entry = {
         externalId: key,
@@ -671,11 +825,7 @@ const MotivationPage = () => {
       toast.success(tr ? 'Badge kazandın' : 'Badge unlocked');
     }
 
-    const contentType = shelf === 'movies'
-      ? (SERIES_TITLES.has(title) ? 'series' : 'movie')
-      : shelf === 'reads'
-        ? 'book'
-        : 'music';
+    const contentType = getSeasonContentType(shelf, title);
     setReviewDraft({ seasonKey, shelf, title, contentType });
     setReviewRating(0);
     setReviewEmotion('');
@@ -829,8 +979,8 @@ const MotivationPage = () => {
           <div className="mot-v3-room-tabs">
             {[
               ['movies', tr ? 'Film & Dizi' : 'Film & Series'],
-              ['reads', tr ? 'Spring okumaları' : 'Spring Reads'],
-              ['music', tr ? 'Spring müzikleri' : 'Spring Music'],
+              ['reads', tr ? `${seasonName(seasonKey, tr)} okumaları` : `${seasonName(seasonKey, tr)} Reads`],
+              ['music', tr ? `${seasonName(seasonKey, tr)} müzikleri` : `${seasonName(seasonKey, tr)} Music`],
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -868,45 +1018,22 @@ const MotivationPage = () => {
           </div>
         ) : (
           <div className="mot-v3-shelf">
-            {activeShelfItems.map((title, index) => (
-              (() => {
-                const itemKey = getSeasonItemKey(seasonKey, activeShelf, title);
-                const done = seasonShelfProgress[activeShelf].includes(itemKey);
-                const review = reviewByItemKey.get(itemKey);
-                const reviewEmotionLabel = REVIEW_EMOTIONS.find((item) => item.id === review?.emotion)?.label?.[prefs.language];
-                const rateLabel = activeShelf === 'movies'
-                  ? (tr ? 'izledim, puanla' : 'rate watched')
-                  : activeShelf === 'reads'
-                    ? (tr ? 'okudum, puanla' : 'rate read')
-                    : (tr ? 'dinledim, puanla' : 'rate listened');
-                return (
-                  <button
-                    key={title}
-                    type="button"
-                    onClick={() => handleSeasonalComplete(activeShelf, title)}
-                    className={done ? 'is-picked' : ''}
-                  >
-                    <span>{String(index + 1).padStart(2, '0')}</span>
-                    <strong>{title}</strong>
-                    {review ? (
-                      <small>
-                        {'★'.repeat(review.rating)}
-                        {reviewEmotionLabel ? ` • ${reviewEmotionLabel}` : ''}
-                      </small>
-                    ) : null}
-                    <em>
-                      {done
-                        ? (review ? (tr ? 'puanlandı' : 'rated') : rateLabel)
-                        : activeShelf === 'movies'
-                          ? (tr ? 'izledim' : 'mark watched')
-                          : activeShelf === 'reads'
-                            ? (tr ? 'okudum' : 'mark read')
-                            : (tr ? 'dinledim' : 'mark listened')}
-                    </em>
-                  </button>
-                );
-              })()
-            ))}
+            {activeShelfItems.map((title, index) => {
+              const itemKey = getSeasonItemKey(seasonKey, activeShelf, title);
+              return (
+                <SeasonalShelfItem
+                  key={title}
+                  title={title}
+                  index={index}
+                  seasonKey={seasonKey}
+                  shelf={activeShelf}
+                  done={seasonShelfProgress[activeShelf].includes(itemKey)}
+                  review={reviewByItemKey.get(itemKey)}
+                  language={prefs.language}
+                  onSelect={handleSeasonalComplete}
+                />
+              );
+            })}
           </div>
         )}
       </section>

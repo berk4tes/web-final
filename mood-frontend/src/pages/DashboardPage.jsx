@@ -504,6 +504,7 @@ const DashboardPage = () => {
   const [watched, setWatched] = useState([]);
   const [readBooks, setReadBooks] = useState([]);
   const [moodHistory, setMoodHistory] = useState([]);
+  const [remoteStreak, setRemoteStreak] = useState(0);
 
   useEffect(() => {
     const vibes = readUserScopedJson(SAVED_VIBES_KEY, userId, []);
@@ -532,6 +533,20 @@ const DashboardPage = () => {
 
   useEffect(() => {
     let active = true;
+    const loadStreak = async () => {
+      try {
+        const { data } = await api.get('/stats/streak');
+        if (active) setRemoteStreak(Number(data?.data?.streak) || 0);
+      } catch {
+        if (active) setRemoteStreak(0);
+      }
+    };
+    loadStreak();
+    return () => { active = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    let active = true;
     const loadFavorites = async () => {
       try {
         const { data } = await api.get('/favorites', { params: { limit: 100 } });
@@ -553,7 +568,7 @@ const DashboardPage = () => {
     [watched]
   );
   const moodCounts = useMemo(() => getMoodCounts(savedVibes, moodHistory), [savedVibes, moodHistory]);
-  const streak = useMemo(() => getStreak(savedVibes, moodHistory), [savedVibes, moodHistory]);
+  const streak = useMemo(() => Math.max(getStreak(savedVibes, moodHistory), remoteStreak), [savedVibes, moodHistory, remoteStreak]);
   const topMood = moodCounts[0]?.[0] || savedVibes[0]?.mood?.colorKey || 'dreamy';
   const topColor = getVibeColor(topMood);
   const totalSignals = savedVibes.length + moodHistory.length + favoriteMusic.length + watchedMedia.length + readBooks.length;

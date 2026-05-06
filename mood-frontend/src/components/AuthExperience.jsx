@@ -149,7 +149,8 @@ const AuthExperience = ({ mode }) => {
       } else {
         await login(form.email, form.password);
         toast.success(t('welcomeBack'));
-        navigate(location.state?.from || '/vibe', { replace: true });
+        const from = location.state?.from;
+        navigate(from && from !== '/moodboard' ? from : '/vibe', { replace: true });
       }
     } catch (err) {
       const fallback = isRegister

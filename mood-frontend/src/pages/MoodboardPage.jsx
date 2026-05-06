@@ -11,24 +11,24 @@ const CH = 840;
 /* ─── Per-layout image slot positions ───────────────── */
 const LAYOUT_SLOTS = {
   editorial: [
-    { xp: 0.05, yp: 0.13, wp: 0.42, hp: 0.23, r: -2.8 },
-    { xp: 0.53, yp: 0.06, wp: 0.44, hp: 0.20, r:  2.2 },
-    { xp: 0.03, yp: 0.37, wp: 0.40, hp: 0.22, r: -1.6 },
-    { xp: 0.47, yp: 0.31, wp: 0.50, hp: 0.24, r:  3.1 },
-    { xp: 0.05, yp: 0.58, wp: 0.44, hp: 0.22, r:  1.9 },
-    { xp: 0.49, yp: 0.56, wp: 0.47, hp: 0.21, r: -2.4 },
-    { xp: 0.21, yp: 0.79, wp: 0.57, hp: 0.18, r:  1.1 },
-    { xp: 0.04, yp: 0.81, wp: 0.17, hp: 0.13, r: -3.6 },
+    { xp: 0.06, yp: 0.19, wp: 0.42, hp: 0.22, r: -2.2 },
+    { xp: 0.53, yp: 0.15, wp: 0.41, hp: 0.20, r:  1.8 },
+    { xp: 0.08, yp: 0.44, wp: 0.37, hp: 0.20, r: -1.2 },
+    { xp: 0.50, yp: 0.39, wp: 0.43, hp: 0.22, r:  2.2 },
+    { xp: 0.06, yp: 0.67, wp: 0.41, hp: 0.19, r:  1.3 },
+    { xp: 0.52, yp: 0.64, wp: 0.40, hp: 0.20, r: -1.7 },
+    { xp: 0.27, yp: 0.84, wp: 0.46, hp: 0.13, r:  0.8 },
+    { xp: 0.05, yp: 0.86, wp: 0.17, hp: 0.11, r: -2.4 },
   ],
   pinterest: [
-    { xp: 0.03, yp: 0.12, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.51, yp: 0.12, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.03, yp: 0.40, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.51, yp: 0.40, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.03, yp: 0.68, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.51, yp: 0.68, wp: 0.45, hp: 0.26, r: 0 },
-    { xp: 0.15, yp: 0.94, wp: 0.68, hp: 0.05, r: 0 },
-    { xp: 0.03, yp: 0.92, wp: 0.10, hp: 0.07, r: 0 },
+    { xp: 0.05, yp: 0.18, wp: 0.42, hp: 0.21, r: 0 },
+    { xp: 0.53, yp: 0.18, wp: 0.42, hp: 0.24, r: 0 },
+    { xp: 0.05, yp: 0.42, wp: 0.42, hp: 0.25, r: 0 },
+    { xp: 0.53, yp: 0.45, wp: 0.42, hp: 0.20, r: 0 },
+    { xp: 0.05, yp: 0.70, wp: 0.42, hp: 0.20, r: 0 },
+    { xp: 0.53, yp: 0.68, wp: 0.42, hp: 0.23, r: 0 },
+    { xp: 0.20, yp: 0.91, wp: 0.30, hp: 0.07, r: 0 },
+    { xp: 0.56, yp: 0.91, wp: 0.30, hp: 0.07, r: 0 },
   ],
   cutout: [
     { xp: 0.05, yp: 0.08, wp: 0.62, hp: 0.36, r: -3.5 },
@@ -143,6 +143,36 @@ const TEXT_SNIPPETS = [
   '7 8 9 10',
 ];
 
+const DECORATION_SYMBOLS = {
+  stars: '✦',
+  hearts: '♡',
+  bows: '🎀',
+  flowers: '✿',
+  arrows: '↗',
+  sparkles: '✧',
+  stamps: '▣',
+  lemons: '🍋',
+  ribbons: '〰',
+  moons: '☾',
+  clouds: '☁',
+  leaves: '❧',
+  film: '🎞',
+  coffee: '☕',
+};
+
+const getMoodAccents = (data) => {
+  const raw = Array.isArray(data?.decorations) ? data.decorations : [];
+  const accents = raw.map((item) => ({
+    name: item,
+    ch: DECORATION_SYMBOLS[String(item).toLowerCase()] || '✦',
+  }));
+  return accents.length ? accents.slice(0, 6) : [
+    { name: 'sparkles', ch: '✧' },
+    { name: 'hearts', ch: '♡' },
+    { name: 'stars', ch: '✦' },
+  ];
+};
+
 let _seq = 1;
 const uid = () => `mb${_seq++}`;
 
@@ -185,6 +215,17 @@ const buildItems = (data, layout = 'editorial') => {
       x: 16, y: CH - 52, w: 260, h: 40, r: 3, z: z++,
     });
   }
+  getMoodAccents(data).slice(0, 3).forEach((accent, i) => {
+    out.push({
+      id: uid(), type: 'accent', label: accent.ch, name: accent.name,
+      x: [430, 46, 492][i] || 430,
+      y: [64, 282, 724][i] || 64,
+      w: [82, 58, 68][i] || 64,
+      h: [82, 58, 68][i] || 64,
+      r: [-12, 14, 8][i] || 0,
+      z: z++,
+    });
+  });
   return out;
 };
 
@@ -211,6 +252,7 @@ const MoodboardPage = () => {
   const dragRef         = useRef(null);
   const scaleRef        = useRef(1);
   const generatedForRef = useRef(null);
+  const uploadInputRef  = useRef(null);
 
   useEffect(() => { scaleRef.current = scale; }, [scale]);
 
@@ -340,6 +382,49 @@ const MoodboardPage = () => {
     }]);
   };
 
+  const addAccent = (accent) => {
+    setItems((prev) => [...prev, {
+      id: uid(), type: 'accent', label: accent.ch, name: accent.name,
+      x: Math.round(CW * 0.22 + Math.random() * CW * 0.38),
+      y: Math.round(CH * 0.18 + Math.random() * CH * 0.48),
+      w: 74 + Math.round(Math.random() * 34),
+      h: 74 + Math.round(Math.random() * 34),
+      r: Math.random() * 28 - 14,
+      z: Math.max(1, ...prev.map((p) => p.z || 0)) + 1,
+    }]);
+  };
+
+  const addStickerImage = (src, name = 'uploaded image') => {
+    setItems((prev) => [...prev, {
+      id: uid(), type: 'stickerImage', src, label: name,
+      x: Math.round(CW * 0.18 + Math.random() * CW * 0.36),
+      y: Math.round(CH * 0.2 + Math.random() * CH * 0.42),
+      w: 150, h: 150,
+      r: Math.random() * 16 - 8,
+      z: Math.max(1, ...prev.map((p) => p.z || 0)) + 1,
+    }]);
+  };
+
+  const handleUploadImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') addStickerImage(reader.result, file.name);
+      event.target.value = '';
+    };
+    reader.onerror = () => {
+      toast.error('Image upload failed');
+      event.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addTape = (tape) => {
     setItems((prev) => [...prev, {
       id: uid(), type: 'tape',
@@ -428,7 +513,12 @@ const MoodboardPage = () => {
 
     if (item.type === 'image') {
       return (
-        <div key={item.id} style={{ ...base, overflow: 'hidden', boxShadow }} {...handlers}>
+        <div key={item.id} style={{
+          ...base,
+          overflow: 'hidden',
+          boxShadow,
+          border: layout === 'cutout' ? '1px solid rgba(0,0,0,0.18)' : '1px solid rgba(255,255,255,0.48)',
+        }} {...handlers}>
           <img src={item.src} alt={item.credit || ''} crossOrigin="anonymous" style={imgStyle} draggable={false} />
         </div>
       );
@@ -455,7 +545,7 @@ const MoodboardPage = () => {
           {item.sub && (
             <p style={{
               margin: '5px 0 0', fontSize: 10.5, fontStyle: 'italic',
-              color: isDark ? '#aaa' : '#666',
+              color: isDark ? 'rgba(245,240,232,0.82)' : '#666',
               fontFamily: 'Georgia, serif', lineHeight: 1.45,
             }}>
               {item.sub}
@@ -471,6 +561,46 @@ const MoodboardPage = () => {
           {...handlers}
         >
           {item.label}
+        </div>
+      );
+    }
+    if (item.type === 'accent') {
+      const color = (mbData?.palette || [bgCfg.fg])[0] || bgCfg.fg;
+      return (
+        <div key={item.id}
+          style={{
+            ...base,
+            color,
+            fontSize: Math.max(42, item.w * 0.74),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: isDark ? 0.86 : 0.72,
+            textShadow: isDark ? '0 8px 30px rgba(0,0,0,0.42)' : '0 8px 24px rgba(255,255,255,0.58)',
+            filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.12))',
+          }}
+          {...handlers}
+        >
+          {item.label}
+        </div>
+      );
+    }
+    if (item.type === 'stickerImage') {
+      return (
+        <div key={item.id}
+          style={{
+            ...base,
+            overflow: 'hidden',
+            border: isDark ? '8px solid rgba(245,240,232,0.88)' : '8px solid rgba(255,255,255,0.94)',
+            borderRadius: 18,
+            background: isDark ? 'rgba(245,240,232,0.88)' : '#fff',
+            boxShadow: isDark
+              ? '0 14px 34px rgba(0,0,0,0.42)'
+              : '0 14px 34px rgba(0,0,0,0.2)',
+          }}
+          {...handlers}
+        >
+          <img src={item.src} alt={item.label || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
         </div>
       );
     }
@@ -523,7 +653,7 @@ const MoodboardPage = () => {
             ...base,
             fontFamily: '"Brush Script MT", "Segoe Script", cursive',
             fontSize: 13, lineHeight: 1.3, overflow: 'hidden',
-            color: isDark ? 'rgba(245,240,232,0.65)' : 'rgba(40,30,20,0.6)',
+            color: isDark ? 'rgba(245,240,232,0.86)' : 'rgba(40,30,20,0.68)',
           }}
           {...handlers}
         >
@@ -664,6 +794,21 @@ const MoodboardPage = () => {
               </div>
             </div>
 
+            {/* Upload */}
+            <div className="mb-panel-block">
+              <h3 className="mb-panel-label">Your images</h3>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept="image/*"
+                className="mb-upload-input"
+                onChange={handleUploadImage}
+              />
+              <button className="mb-upload-btn" onClick={() => uploadInputRef.current?.click()}>
+                Upload sticker image
+              </button>
+            </div>
+
             {/* Stickers */}
             <div className="mb-panel-block">
               <h3 className="mb-panel-label">Stickers</h3>
@@ -679,6 +824,24 @@ const MoodboardPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Mood accents */}
+            <div className="mb-panel-block">
+              <h3 className="mb-panel-label">Mood accents</h3>
+              <div className="mb-accent-grid">
+                {getMoodAccents(mbData).map((accent) => (
+                  <button
+                    key={accent.name}
+                    className="mb-accent-btn"
+                    onClick={() => addAccent(accent)}
+                    title={accent.name}
+                    style={{ '--accent-color': (mbData.palette || [])[0] || bgCfg.fg }}
+                  >
+                    {accent.ch}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Washi tape */}

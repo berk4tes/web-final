@@ -98,9 +98,6 @@ const WheelEmptyState = ({ language, suggestions, loading, onPick }) => {
         <span>{tr ? 'Vibe çarkı' : 'Vibe wheel'}</span>
         <h2>{tr ? 'Kararsızsan çevir.' : 'Spin if you are stuck.'}</h2>
         <p>{selected}</p>
-        <button type="button" onClick={spin} disabled={spinning || loading}>
-          {spinning ? (tr ? 'Dönüyor...' : 'Spinning...') : (tr ? 'Çarkı çevir' : 'Spin the wheel')}
-        </button>
       </div>
     </section>
   );
